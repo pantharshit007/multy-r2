@@ -24,6 +24,48 @@ This is a good personal-project scope.
 
 ---
 
+## Hybrid Architecture
+
+The app should support two bucket connection styles under one UI:
+
+### 1. Worker binding mode
+
+- user binds bucket A, B, C to one Worker in Cloudflare dashboard
+- the app talks to those buckets through the Worker
+
+### 2. Endpoint mode
+
+- user stores a bucket endpoint or custom domain in the app
+- the app can switch between multiple endpoints, similar to `r2-uploader`
+
+### Result
+
+- one central UI
+- multiple buckets
+- one control plane
+- flexible bucket setup for personal use
+
+This is the cleanest mix of `R2-Manager-Worker` and `r2-uploader`.
+
+---
+
+## Recommended Tech Stack
+
+- UI: `Vite + React + TanStack Router`
+- Backend: `Cloudflare Worker`
+- Storage/metadata: `Cloudflare D1`
+- Auth: `Cloudflare Access` later if needed
+- Styling/UI primitives: whatever is light and fast for you, keep it simple at first
+
+Why this stack:
+
+- the app is a dashboard, not an SEO site
+- TanStack Start is optional, but not necessary for v1
+- Vite + React + Router is simpler and lower-risk for a personal tool
+- Worker + D1 fits the bucket management and signed-link logic well
+
+---
+
 ## Best Repo to Learn From
 
 If you want one repo to study most closely, use `R2-Manager-Worker` as the main technical reference.
@@ -58,7 +100,9 @@ What not to copy wholesale:
 ### `jw-12138/r2-uploader`
 
 - good endpoint/domain UX
-- but it is still a per-bucket worker model
+- supports multiple endpoints in the UI
+- syncs endpoint config to the user's account via GitHub login
+- but each endpoint is still effectively a separate bucket/worker target
 - useful inspiration, not the base
 
 ---
@@ -100,6 +144,44 @@ The admin app should only:
 - generate private links when requested
 
 It should not sit in the middle of normal public delivery.
+
+---
+
+## How Multiple Buckets Work
+
+If you have bucket A, bucket B, and bucket C, the setup is:
+
+1. Bind all three buckets to the same Worker in Cloudflare dashboard.
+2. Store one metadata row per bucket in D1.
+3. Use that row to map:
+   - display name
+   - binding name
+   - custom domain
+   - access mode
+   - sort order
+4. The UI loads the bucket list from D1.
+5. When you open a bucket, the Worker uses the saved binding name to access the correct R2 bucket.
+
+Example:
+
+- `bucket-a` -> binding `BUCKET_A`
+- `bucket-b` -> binding `BUCKET_B`
+- `bucket-c` -> binding `BUCKET_C`
+
+This gives you:
+
+- one interface
+- one Worker
+- many buckets
+- separate URLs per bucket when configured
+
+This also works with the hybrid model above, where some buckets may be bound directly and others may be stored as endpoints/custom domains in metadata.
+
+Important:
+
+- the buckets themselves are still configured in Cloudflare
+- the app is the manager and URL copier
+- the Worker is the execution layer
 
 ---
 
@@ -176,6 +258,7 @@ Do not start with complex extras.
 - one Worker project
 - one D1 database for metadata
 - Cloudflare dashboard bindings for the buckets
+- a small D1 table that stores the bucket list and their binding names
 
 ### UI
 
