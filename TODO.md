@@ -1,0 +1,5 @@
+- [ ] improve the whole folder structure, ui and its working can add more features (hirerachy, etc)
+- [ ] upload related features
+    - Skip uploading files with the same name
+    - Rename each file with a random ID
+    - Compress images before uploading

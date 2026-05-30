@@ -23,14 +23,16 @@ Personal Cloudflare R2 admin dashboard built with Vite, React, TanStack Router, 
 Use this only when testing the Worker in this repo as an endpoint.
 
 1. In `wrangler.jsonc`, bind your bucket as `R2_BUCKET` or `BUCKET_A`.
-2. In `.dev.vars`, set `AUTH_KEY_SECRET` to any local test key.
+2. In `.dev.vars`, set `AUTH_KEY_SECRET` and `PRIVATE_LINK_SECRET` for local testing.
 3. Start the Worker endpoint: `pnpm wr:dev`
 4. Start the UI in another terminal: `pnpm dev`
 5. In the UI, add endpoint `http://localhost:8787`.
 6. In the UI, set API key to the same value as `.dev.vars` `AUTH_KEY_SECRET`.
 7. Open that endpoint in the UI and use upload/list/delete.
 
-`AUTH_KEY_SECRET` belongs to the Worker endpoint. The browser does not invent it. For local testing, `.dev.vars` gives the local Worker that secret, and the UI stores the same value per endpoint in localStorage so it can send `x-api-key`.
+`AUTH_KEY_SECRET` and `PRIVATE_LINK_SECRET` belong to the Worker endpoint, not the browser. For local testing, `.dev.vars` gives the local Worker those secrets, and the UI stores the endpoint API key in localStorage so it can send `x-api-key`.
+
+For deployed Workers, use Wrangler secrets instead of committing secret values to `wrangler.jsonc`. The config declares the required secret names, and `wrangler deploy` will fail if they are missing.
 
 ## Deployment
 

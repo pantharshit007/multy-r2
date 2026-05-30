@@ -1,6 +1,7 @@
 import { Link, useParams } from "@tanstack/react-router";
 import { FormEvent, useEffect, useState, useTransition } from "react";
 import {
+  createEndpointFolder,
   deleteEndpointObject,
   listEndpointObjects,
   listEndpointRecords,
@@ -159,6 +160,7 @@ function UploadBox({
   onStatus: (message: string | null) => void;
 }) {
   const [key, setKey] = useState("");
+  const [folder, setFolder] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -168,8 +170,9 @@ function UploadBox({
     startTransition(async () => {
       onError(null);
       try {
-        const result = await uploadEndpointObject(record, file, key || file.name);
+        const result = await uploadEndpointObject(record, file, buildObjectKey(folder, key || file.name));
         setKey("");
+        setFolder("");
         setFile(null);
         onStatus(`Uploaded ${result.key}`);
         onDone();
@@ -179,18 +182,53 @@ function UploadBox({
     });
   }
 
+  function createFolder() {
+    startTransition(async () => {
+      onError(null);
+      try {
+        const result = await createEndpointFolder(record, folder);
+        onStatus(`Created folder ${result.key}`);
+        onDone();
+      } catch (cause) {
+        onError(cause instanceof Error ? cause.message : "Could not create folder");
+      }
+    });
+  }
+
   return (
-    <form className="mt-4 grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3 md:grid-cols-[1fr_1fr_auto]" onSubmit={submit}>
+    <form className="mt-4 grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-3 md:grid-cols-[1fr_1fr_1fr_auto_auto]" onSubmit={submit}>
       <label className="flex h-11 cursor-pointer items-center justify-center rounded-xl border border-dashed border-zinc-700 px-3 text-sm text-zinc-300 hover:border-amber-300">
         <input className="sr-only" type="file" onChange={(event) => setFile(event.target.files?.[0] ?? null)} />
         <span className="truncate">{file ? file.name : "Choose file"}</span>
       </label>
+      <input className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300" value={folder} onChange={(event) => setFolder(event.target.value)} placeholder="folder/prefix" />
       <input className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300" value={key} onChange={(event) => setKey(event.target.value)} placeholder="optional/path/name.ext" />
+      <button className="h-11 rounded-xl border border-zinc-700 px-4 text-sm font-semibold text-zinc-200 hover:border-amber-300" type="button" disabled={disabled || isPending || !folder} onClick={createFolder}>
+        Create folder
+      </button>
       <button className="h-11 rounded-xl bg-zinc-50 px-4 text-sm font-semibold text-zinc-950 hover:bg-amber-200" type="submit" disabled={disabled || isPending || !file}>
         {isPending ? "Uploading..." : "Upload"}
       </button>
+      <p className="md:col-span-5 text-xs leading-5 text-zinc-500">
+        Folders are just prefixes in R2. Creating one writes a zero-byte folder marker so it can show up in listings.
+      </p>
     </form>
   );
+}
+
+function buildObjectKey(folder: string, name: string): string {
+  const cleanName = name.trim().replace(/^\/+/, "");
+  if (!cleanName || cleanName.includes("..")) {
+    throw new Error("Object key is invalid");
+  }
+
+  const cleanFolder = folder.trim().replace(/^\/+|\/+$/g, "");
+  if (!cleanFolder) return cleanName;
+  if (cleanFolder.includes("..")) {
+    throw new Error("Folder name is invalid");
+  }
+
+  return `${cleanFolder}/${cleanName}`;
 }
 
 function ObjectRow({

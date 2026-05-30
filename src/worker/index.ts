@@ -33,6 +33,8 @@ const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
 };
 
+const LOCAL_ENDPOINT_PREFIX = "/__multy-r2-endpoint";
+
 const CORS_HEADERS = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET,POST,PATCH,DELETE,OPTIONS",
@@ -44,15 +46,17 @@ const ACCESS_MODES = new Set<AccessMode>(["public", "private", "signed-link"]);
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const isLocalEndpointRequest = url.pathname.startsWith(LOCAL_ENDPOINT_PREFIX);
+    const endpointUrl = normalizeEndpointUrl(url);
 
-    if (url.pathname.startsWith("/api/")) {
+    if (endpointUrl.pathname.startsWith("/api/")) {
       if (request.method.toUpperCase() === "OPTIONS") {
         return new Response(null, { status: 204, headers: CORS_HEADERS });
       }
 
       try {
-        authorizeApiRequest(request, env, url);
-        return await handleApi(request, env, url);
+        authorizeApiRequest(request, env, endpointUrl);
+        return await handleApi(request, env, endpointUrl);
       } catch (error) {
         if (!(error instanceof ApiError)) console.error(error);
         const message = error instanceof ApiError ? error.message : "Unexpected server error";
@@ -61,12 +65,16 @@ export default {
       }
     }
 
+    if (!isLocalEndpointRequest && shouldServeUiAssets(url)) {
+      return env.ASSETS.fetch(request);
+    }
+
     if (request.method.toUpperCase() === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
     try {
-      return await handleEndpointApi(request, env, url);
+      return await handleEndpointApi(request, env, endpointUrl);
     } catch (error) {
       if (!(error instanceof ApiError)) console.error(error);
       const message = error instanceof ApiError ? error.message : "Unexpected server error";
@@ -77,6 +85,20 @@ export default {
     return env.ASSETS.fetch(request);
   },
 };
+
+function shouldServeUiAssets(url: URL): boolean {
+  return url.pathname === "/" || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/buckets/");
+}
+
+function normalizeEndpointUrl(url: URL): URL {
+  if (!url.pathname.startsWith(LOCAL_ENDPOINT_PREFIX)) {
+    return url;
+  }
+
+  const next = new URL(url.toString());
+  next.pathname = `/${url.pathname.slice(LOCAL_ENDPOINT_PREFIX.length).replace(/^\/+/, "")}`;
+  return next;
+}
 
 async function handleEndpointApi(request: Request, env: Env, url: URL): Promise<Response> {
   const method = request.method.toUpperCase();
@@ -104,6 +126,9 @@ async function handleEndpointApi(request: Request, env: Env, url: URL): Promise<
 
     const headers = new Headers(CORS_HEADERS);
     object.writeHttpMetadata(headers);
+    if (!headers.has("content-type")) {
+      headers.set("content-type", guessContentTypeFromKey(key));
+    }
     headers.set("etag", object.httpEtag);
     return new Response(object.body, { headers });
   }
@@ -112,7 +137,7 @@ async function handleEndpointApi(request: Request, env: Env, url: URL): Promise<
 
   if (method === "PUT") {
     await bucket.put(key, request.body, {
-      httpMetadata: { contentType: request.headers.get("content-type") ?? undefined },
+      httpMetadata: { contentType: request.headers.get("content-type") ?? guessContentTypeFromKey(key) },
     });
     return new Response("Done", { headers: CORS_HEADERS });
   }
@@ -505,6 +530,42 @@ function constantTimeEqual(left: string, right: string): boolean {
     result |= left.charCodeAt(index) ^ right.charCodeAt(index);
   }
   return result === 0;
+}
+
+function guessContentTypeFromKey(key: string): string {
+  const extension = key.split(".").pop()?.toLowerCase() ?? "";
+
+  switch (extension) {
+    case "avif":
+      return "image/avif";
+    case "bmp":
+      return "image/bmp";
+    case "css":
+      return "text/css; charset=utf-8";
+    case "gif":
+      return "image/gif";
+    case "htm":
+    case "html":
+      return "text/html; charset=utf-8";
+    case "jpeg":
+    case "jpg":
+      return "image/jpeg";
+    case "js":
+    case "mjs":
+      return "text/javascript; charset=utf-8";
+    case "json":
+      return "application/json; charset=utf-8";
+    case "png":
+      return "image/png";
+    case "svg":
+      return "image/svg+xml";
+    case "txt":
+      return "text/plain; charset=utf-8";
+    case "webp":
+      return "image/webp";
+    default:
+      return "application/octet-stream";
+  }
 }
 
 function splitPath(pathname: string): string[] {

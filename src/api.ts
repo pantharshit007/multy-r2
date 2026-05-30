@@ -7,6 +7,7 @@ import type {
 import { joinUrl } from "./shared";
 
 const ENDPOINTS_STORAGE_KEY = "multy-r2:endpoints";
+const LOCAL_ENDPOINT_PROXY_PREFIX = "/__multy-r2-endpoint";
 
 export function listEndpointRecords(): EndpointRecord[] {
   const raw = localStorage.getItem(ENDPOINTS_STORAGE_KEY);
@@ -54,8 +55,8 @@ export function deleteEndpointRecord(id: string): EndpointRecord[] {
 }
 
 async function endpointRequest(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
-  const url = `${record.endPoint}${path}`;
-  const response = await fetch(url, {
+  const target = new URL(path, `${record.endPoint}/`);
+  const response = await fetch(resolveEndpointUrl(target).toString(), {
     ...init,
     headers: {
       "x-api-key": record.apiKey,
@@ -69,6 +70,19 @@ async function endpointRequest(record: EndpointRecord, path: string, init?: Requ
   }
 
   return response;
+}
+
+function resolveEndpointUrl(target: URL): URL {
+  if (import.meta.env.DEV && isLocalWorkerEndpoint(target)) {
+    return new URL(`${LOCAL_ENDPOINT_PROXY_PREFIX}${target.pathname}${target.search}`, target.origin);
+  }
+
+  return target;
+}
+
+function isLocalWorkerEndpoint(url: URL): boolean {
+  const isLoopbackHost = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1";
+  return isLoopbackHost && url.port === "8787";
 }
 
 export async function listEndpointObjects(record: EndpointRecord, cursor?: string | null): Promise<ObjectListResponse> {
@@ -92,11 +106,25 @@ export async function uploadEndpointObject(record: EndpointRecord, file: File, k
   const cleanKey = sanitizeKey(key || file.name);
   await endpointRequest(record, `/${encodeKey(cleanKey)}`, {
     method: "PUT",
-    headers: file.type ? { "content-type": file.type } : undefined,
+    headers: { "content-type": file.type || guessContentType(cleanKey) },
     body: file,
   });
 
   return { key: cleanKey, publicUrl: publicUrlFor(record, cleanKey) };
+}
+
+export async function createEndpointFolder(record: EndpointRecord, folder: string): Promise<{ key: string; publicUrl: string | null }> {
+  const cleanFolder = sanitizeFolder(folder);
+  const key = `${cleanFolder}/`;
+  await endpointRequest(record, `/${encodeKey(key)}`, {
+    method: "PUT",
+    headers: {
+      "content-type": "application/x-directory",
+    },
+    body: new Blob([]),
+  });
+
+  return { key, publicUrl: publicUrlFor(record, key) };
 }
 
 export async function deleteEndpointObject(record: EndpointRecord, key: string): Promise<void> {
@@ -142,6 +170,48 @@ function sanitizeKey(value: string): string {
   return key;
 }
 
+function sanitizeFolder(value: string): string {
+  const folder = value.trim().replace(/^\/+|\/+$/g, "");
+  if (!folder || folder.includes("..")) throw new Error("Folder name is invalid");
+  return folder;
+}
+
 function encodeKey(key: string): string {
   return key.split("/").map(encodeURIComponent).join("/");
+}
+
+function guessContentType(key: string): string {
+  const extension = key.split(".").pop()?.toLowerCase() ?? "";
+
+  switch (extension) {
+    case "avif":
+      return "image/avif";
+    case "bmp":
+      return "image/bmp";
+    case "css":
+      return "text/css; charset=utf-8";
+    case "gif":
+      return "image/gif";
+    case "htm":
+    case "html":
+      return "text/html; charset=utf-8";
+    case "jpeg":
+    case "jpg":
+      return "image/jpeg";
+    case "js":
+    case "mjs":
+      return "text/javascript; charset=utf-8";
+    case "json":
+      return "application/json; charset=utf-8";
+    case "png":
+      return "image/png";
+    case "svg":
+      return "image/svg+xml";
+    case "txt":
+      return "text/plain; charset=utf-8";
+    case "webp":
+      return "image/webp";
+    default:
+      return "application/octet-stream";
+  }
 }
