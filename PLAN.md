@@ -6,6 +6,7 @@ Build a personal Cloudflare R2 admin UI that can manage multiple buckets from on
 
 ## Recommended Stack
 
+- Package manager: `pnpm`
 - UI: `Vite + React + TanStack Router`
 - Backend: `Cloudflare Worker`
 - Metadata: `Cloudflare D1`
@@ -133,3 +134,64 @@ For personal use, keep it simple first.
 - `cloudy`: `https://github.com/james-elicx/cloudy`
 - `r2-uploader`: `https://github.com/jw-12138/r2-uploader`
 - `r2-uploader-example-worker`: `https://github.com/jw-12138/r2-uploader-example-worker`
+
+## Implementation Checklist
+
+### 1. Project setup
+
+- create a Vite + React app with `pnpm`
+- add TanStack Router
+- add Cloudflare Worker support
+- add D1 binding
+
+### 2. D1 schema
+
+Create one table for bucket metadata.
+
+Suggested fields:
+
+- `id`
+- `name`
+- `binding_name`
+- `endpoint`
+- `custom_domain`
+- `access_mode`
+- `sort_order`
+- `created_at`
+- `updated_at`
+
+### 3. Worker API
+
+Suggested routes:
+
+- `GET /api/buckets`
+- `POST /api/buckets`
+- `PATCH /api/buckets/:id`
+- `DELETE /api/buckets/:id`
+- `GET /api/buckets/:id/objects`
+- `POST /api/buckets/:id/upload`
+- `DELETE /api/buckets/:id/objects/:key`
+- `GET /api/buckets/:id/private-link/:key`
+
+### 4. UI pages
+
+- bucket list page
+- bucket detail / file browser page
+- settings drawer or page for access mode and custom domain
+
+### 5. Environment variables
+
+- `ACCOUNT_ID` if you use Cloudflare API calls
+- any API token or secret you decide to keep server-side
+- optional Access-related values later
+
+### 6. Build order
+
+1. scaffold app
+2. connect D1
+3. load bucket list
+4. browse files
+5. upload/delete files
+6. copy public URL
+7. generate private links
+8. polish UI
