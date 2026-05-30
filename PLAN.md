@@ -1,300 +1,135 @@
+# R2 Admin Plan
+
 ## Goal
 
-Build a personal Cloudflare-based R2 admin UI where you can:
+Build a personal Cloudflare R2 admin UI that can manage multiple buckets from one place, with a better UI than the existing repos.
 
-- manage multiple buckets from one interface
-- upload and delete assets
-- copy each bucket's public URL
-- optionally generate private signed links with expiry
-- support per-bucket custom domains when available
-
----
-
-## Current Direction
-
-Your preferred shape is:
-
-- **UI** on Pages or Worker assets
-- **one Worker** for API and bucket operations
-- **multiple R2 bucket bindings** configured in Cloudflare dashboard
-- **bucket access decided per bucket**: public, private, or signed-link mode
-- **custom domain optional**, not required
-
-This is a good personal-project scope.
-
----
-
-## Hybrid Architecture
-
-The app should support two bucket connection styles under one UI:
-
-### 1. Worker binding mode
-
-- user binds bucket A, B, C to one Worker in Cloudflare dashboard
-- the app talks to those buckets through the Worker
-
-### 2. Endpoint mode
-
-- user stores a bucket endpoint or custom domain in the app
-- the app can switch between multiple endpoints, similar to `r2-uploader`
-
-### Result
-
-- one central UI
-- multiple buckets
-- one control plane
-- flexible bucket setup for personal use
-
-This is the cleanest mix of `R2-Manager-Worker` and `r2-uploader`.
-
----
-
-## Recommended Tech Stack
+## Recommended Stack
 
 - UI: `Vite + React + TanStack Router`
 - Backend: `Cloudflare Worker`
-- Storage/metadata: `Cloudflare D1`
-- Auth: `Cloudflare Access` later if needed
-- Styling/UI primitives: whatever is light and fast for you, keep it simple at first
+- Metadata: `Cloudflare D1`
+- Optional auth later: `Cloudflare Access`
 
 Why this stack:
 
-- the app is a dashboard, not an SEO site
-- TanStack Start is optional, but not necessary for v1
-- Vite + React + Router is simpler and lower-risk for a personal tool
-- Worker + D1 fits the bucket management and signed-link logic well
+- this is a dashboard, not an SEO app
+- TanStack Start is fine, but not required for v1
+- Vite + React + Router is simpler and lower-risk
+- Worker + D1 fits bucket control, access mode, and signed-link logic
 
----
+## Architecture
 
-## Best Repo to Learn From
+Use one central control plane and keep public bucket delivery direct.
 
-If you want one repo to study most closely, use `R2-Manager-Worker` as the main technical reference.
+- Admin UI lives in one app
+- One Worker handles API actions and signed-link generation
+- D1 stores bucket metadata and URL mappings
+- Public bucket traffic goes directly to the bucket URL or custom domain
+- The Worker should not proxy normal public reads
 
-Why:
+## Hybrid Bucket Model
 
-- it already has a real admin/control-plane architecture
-- it already handles uploads, navigation, move/copy/delete, and file listing
-- it is closer to a unified multi-bucket tool than the other two repos
+The app should support two bucket connection styles under one UI.
 
-What not to copy wholesale:
+### Worker binding mode
 
-- the extra features you do not need right now
-- the heavy backend surface area
+- user binds bucket A, B, C to the same Worker in Cloudflare dashboard
+- the app talks to those buckets through the Worker bindings
 
----
+### Endpoint mode
 
-## Repo Verdict
+- user stores a bucket endpoint or custom domain in the app
+- the app can switch between multiple saved endpoints, like `r2-uploader`
 
-### `neverinfamous/R2-Manager-Worker`
+### Result
 
-- best overall architecture reference
-- strongest match for one interface managing many buckets
-- too feature-heavy to fork without cleanup
+- one UI
+- one control plane
+- multiple buckets
+- flexible setup for personal use
 
-### `james-elicx/cloudy`
-
-- best UI/reference for a cleaner explorer
-- bucket discovery is binding-based, not your preferred control model
-- good inspiration, not best base
-
-### `jw-12138/r2-uploader`
-
-- good endpoint/domain UX
-- supports multiple endpoints in the UI
-- syncs endpoint config to the user's account via GitHub login
-- but each endpoint is still effectively a separate bucket/worker target
-- useful inspiration, not the base
-
----
-
-## Platform Choice
-
-Use a **Worker** for the control plane.
-
-Reason:
-
-- needs secrets / auth / bucket ops
-- easier to keep one place for URL generation and access mode logic
-- fits better than Pages-only for the backend side
-
-Pages is still fine for the UI if you want a separate frontend build.
-
----
-
-## Domain Model
-
-### Public URL
-
-Each bucket can have its own public URL:
-
-- custom domain if the user connects one
-- otherwise the bucket can still be public through whatever access mode you allow
-
-### Private Link
-
-For private buckets, expose a Worker-generated signed link with expiry.
-
-### Admin App
-
-The admin app should only:
-
-- store the mapping
-- show the current URL
-- copy the URL
-- generate private links when requested
-
-It should not sit in the middle of normal public delivery.
-
----
+This is the best mix of `R2-Manager-Worker` and `r2-uploader`.
 
 ## How Multiple Buckets Work
 
-If you have bucket A, bucket B, and bucket C, the setup is:
+If you have bucket A, bucket B, and bucket C:
 
-1. Bind all three buckets to the same Worker in Cloudflare dashboard.
-2. Store one metadata row per bucket in D1.
-3. Use that row to map:
-   - display name
-   - binding name
-   - custom domain
-   - access mode
-   - sort order
-4. The UI loads the bucket list from D1.
-5. When you open a bucket, the Worker uses the saved binding name to access the correct R2 bucket.
+- each bucket gets one record in D1
+- each record stores the display name, binding name or endpoint, custom domain, access mode, and sort order
+- the UI loads the bucket list from D1
+- selecting a bucket routes actions to the correct binding or endpoint
 
-Example:
+Example mapping:
 
-- `bucket-a` -> binding `BUCKET_A`
-- `bucket-b` -> binding `BUCKET_B`
-- `bucket-c` -> binding `BUCKET_C`
+- `bucket-a` -> `BUCKET_A`
+- `bucket-b` -> `BUCKET_B`
+- `bucket-c` -> `BUCKET_C`
 
-This gives you:
+This can also work if some buckets are bound directly and others are stored as endpoints or custom domains.
 
-- one interface
-- one Worker
-- many buckets
-- separate URLs per bucket when configured
+## Bucket Access Modes
 
-This also works with the hybrid model above, where some buckets may be bound directly and others may be stored as endpoints/custom domains in metadata.
+Each bucket can be treated as one of these:
 
-Important:
+- public
+- private
+- signed-link only
 
-- the buckets themselves are still configured in Cloudflare
-- the app is the manager and URL copier
-- the Worker is the execution layer
-
----
-
-## What the App Should Do
-
-### Bucket management
-
-- show all configured buckets
-- let user mark bucket metadata as public/private
-- let user store the bucket's custom domain
-
-### File management
-
-- browse files/folders
-- upload files
-- delete files
-- copy public URL
-- copy signed private link if enabled
-
-### Optional later
-
-- rename/move/copy
-- folder tools
-- bulk upload
-- bulk delete
-- search
-
----
-
-## Important Clarification
-
-Your idea is **not** to proxy all public bucket traffic through the Worker.
-
-Instead:
-
-- public traffic should go directly to the bucket's public URL / custom domain
-- the Worker should be the management layer
-- private access can be handled by signed links from the Worker
-
-This keeps the architecture simpler and avoids forcing all reads through the Worker.
-
----
-
-## MVP Plan
-
-1. Build the UI shell
-2. Connect one Worker API
-3. Support multiple R2 bucket bindings in Cloudflare dashboard
-4. Show bucket list in the UI
-5. Browse files in a selected bucket
-6. Upload/delete files
-7. Store bucket custom domain in app metadata
-8. Add `Copy public URL`
-9. Add optional `Copy private link` with expiry
-10. Add public/private toggle per bucket
-
-Do not start with complex extras.
-
----
-
-## Notes On Bucket Access
+Rules:
 
 - if a bucket is public, show its public URL directly
 - if a bucket has a custom domain, prefer that URL
-- if a bucket is private, show a signed link option only
+- if a bucket is private, show a signed link option
 - if a bucket has no custom domain yet, the app should still work
 
----
+## Public URLs and Signed Links
 
-## Implementation Strategy
+- public URL: bucket custom domain or public bucket URL
+- private link: Worker-generated signed link with expiry
+- the app should mainly support `Copy public URL`
+- `Copy private link` is optional but useful
 
-### Control plane
+## User Flow
 
-- one Worker project
-- one D1 database for metadata
-- Cloudflare dashboard bindings for the buckets
-- a small D1 table that stores the bucket list and their binding names
+1. User creates buckets in Cloudflare.
+2. User either binds buckets to the Worker or saves endpoint/domain records in the UI.
+3. The app loads the bucket records.
+4. User opens a bucket and manages files.
+5. User copies the public URL or an optional signed private link.
 
-### UI
+## MVP
 
-- a clean bucket sidebar
-- a file browser pane
-- copy buttons for URLs
-- a simple access-mode control per bucket
+Build only this first:
 
-### Later improvements
+- UI shell
+- bucket list
+- file browser
+- upload and delete
+- bucket custom domain field
+- public/private toggle
+- copy public URL
+- copy private signed link with expiry
 
-- add auth
-- add better UX polish
-- add search and bulk operations
-- add more storage metadata
+Do not start with:
 
----
+- search
+- bulk operations
+- analytics
+- webhooks
+- lifecycle tools
+- advanced permissions
 
-## Decision
+## Auth
 
-For your personal use case:
+For personal use, keep it simple first.
 
-- **one interface**: yes
-- **one Worker**: yes
-- **multiple buckets**: yes
-- **custom domain per bucket**: optional but supported
-- **public URL copy**: yes
-- **private signed links**: yes
-- **upload/download URL features**: not needed as a core MVP
+- no full auth system required in v1
+- if needed later, put Cloudflare Access in front of the admin UI
 
-This is a clean and practical scope.
+## References
 
----
-
-## Reference Links
-
-- `R2-Manager-Worker`: https://github.com/neverinfamous/R2-Manager-Worker
-- `cloudy`: https://github.com/james-elicx/cloudy
-- `r2-uploader`: https://github.com/jw-12138/r2-uploader
-- `r2-uploader-example-worker`: https://github.com/jw-12138/r2-uploader-example-worker
+- `R2-Manager-Worker`: `https://github.com/neverinfamous/R2-Manager-Worker`
+- `cloudy`: `https://github.com/james-elicx/cloudy`
+- `r2-uploader`: `https://github.com/jw-12138/r2-uploader`
+- `r2-uploader-example-worker`: `https://github.com/jw-12138/r2-uploader-example-worker`
