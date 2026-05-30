@@ -1,0 +1,2 @@
+AUTH_KEY_SECRET=replace-with-a-long-random-local-api-key
+PRIVATE_LINK_SECRET=replace-with-a-long-random-local-secret

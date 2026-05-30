@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "multy-r2",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-05-30",
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "multy-r2",
+      "database_id": "e64f817b-3054-4246-98b8-9d096b269417"
+    }
+  ],
+  "r2_buckets": [
+  {
+    "binding": "BUCKET_A",
+    "bucket_name": "shottr-bucket"
+  }
+  ], 
+  "vars": {
+    "AUTH_KEY_SECRET": "random12345",
+    "PRIVATE_LINK_SECRET": "15f5ddb139f59ce2abb5cf3ff8bca1819a8b31a311208ca5fa828f63ed0b5609"
+  }
+}
