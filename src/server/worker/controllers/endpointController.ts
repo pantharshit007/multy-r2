@@ -26,6 +26,17 @@ export async function handleEndpointApi(request: Request, env: Env, url: URL): P
 
   const key = sanitizeObjectKey(decodeURIComponent(url.pathname.replace(/^\/+/, "")));
 
+  if (method === "HEAD") {
+    authorizeEndpointRequest(request, env);
+    const object = await bucket.head(key);
+    if (!object) throw new ApiError(404, "Object not found");
+
+    const headers = new Headers(CORS_HEADERS);
+    object.writeHttpMetadata(headers);
+    headers.set("etag", object.httpEtag);
+    return new Response(null, { status: 200, headers });
+  }
+
   if (method === "GET") {
     const object = await bucket.get(key);
     if (!object) throw new ApiError(404, "Object not found");

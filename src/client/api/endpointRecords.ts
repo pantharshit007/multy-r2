@@ -1,10 +1,14 @@
 import type {
+  DuplicateStrategy,
   EndpointRecord,
+  ImageOutputFormat,
+  ImageUploadSettings,
   ObjectListResponse,
   PrivateLinkResponse,
   R2ObjectSummary,
+  UploadSettings,
 } from "../../shared";
-import { joinUrl } from "../../shared";
+import { DEFAULT_UPLOAD_SETTINGS, joinUrl } from "../../shared";
 
 const ENDPOINTS_STORAGE_KEY = "multy-r2:endpoints";
 const LOCAL_ENDPOINT_PROXY_PREFIX = "/local-r2-endpoint";
@@ -22,6 +26,7 @@ export function listEndpointRecords(): EndpointRecord[] {
         endPoint: normalizeEndpoint(record.endPoint ?? record.endpoint ?? ""),
         apiKey: record.apiKey ?? "",
         customDomain: normalizeOptionalEndpoint(record.customDomain ?? ""),
+        uploadSettings: normalizeUploadSettings(record.uploadSettings),
       }))
       .filter((record) => record.endPoint && record.apiKey);
   } catch {
@@ -29,13 +34,15 @@ export function listEndpointRecords(): EndpointRecord[] {
   }
 }
 
-export function saveEndpointRecord(input: Omit<EndpointRecord, "id"> & { id?: string }): EndpointRecord[] {
+export function saveEndpointRecord(input: Omit<EndpointRecord, "id" | "uploadSettings"> & { id?: string; uploadSettings?: Partial<UploadSettings> }): EndpointRecord[] {
   const records = listEndpointRecords();
+  const existing = input.id ? records.find((record) => record.id === input.id) : undefined;
   const next: EndpointRecord = {
     id: input.id ?? crypto.randomUUID(),
     endPoint: normalizeEndpoint(input.endPoint),
     apiKey: input.apiKey.trim(),
     customDomain: normalizeOptionalEndpoint(input.customDomain),
+    uploadSettings: input.uploadSettings ? normalizeUploadSettings(input.uploadSettings) : existing?.uploadSettings ?? cloneUploadSettings(DEFAULT_UPLOAD_SETTINGS),
   };
 
   if (!next.endPoint || !next.apiKey) {
@@ -71,15 +78,58 @@ export async function listEndpointObjects(record: EndpointRecord, cursor?: strin
   };
 }
 
-export async function uploadEndpointObject(record: EndpointRecord, file: File, key: string): Promise<{ key: string; publicUrl: string | null }> {
+export interface UploadEndpointObjectResult {
+  key: string;
+  publicUrl: string | null;
+  skipped: boolean;
+  renamedFrom: string | null;
+  originalSize: number;
+  uploadedSize: number;
+  image: {
+    processed: boolean;
+    removeExif: boolean;
+    outputFormat: ImageOutputFormat;
+  } | null;
+}
+
+export async function uploadEndpointObject(record: EndpointRecord, file: File, key: string): Promise<UploadEndpointObjectResult> {
   const cleanKey = sanitizeKey(key || file.name);
-  await endpointRequest(record, `/${encodeKey(cleanKey)}`, {
+  const uploadFile = await prepareUploadFile(file, record.uploadSettings.imageUploadSettings);
+  const uploadKey = cleanKey;
+
+  if (record.uploadSettings.duplicateStrategy === "skip" && (await objectExists(record, uploadKey))) {
+    return {
+      key: uploadKey,
+      publicUrl: publicUrlFor(record, uploadKey),
+      skipped: true,
+      renamedFrom: null,
+      originalSize: file.size,
+      uploadedSize: 0,
+      image: null,
+    };
+  }
+
+  await endpointRequest(record, `/${encodeKey(uploadKey)}`, {
     method: "PUT",
-    headers: { "content-type": file.type || guessContentType(cleanKey) },
-    body: file,
+    headers: { "content-type": uploadFile.type || guessContentType(uploadKey) },
+    body: uploadFile,
   });
 
-  return { key: cleanKey, publicUrl: publicUrlFor(record, cleanKey) };
+  return {
+    key: uploadKey,
+    publicUrl: publicUrlFor(record, uploadKey),
+    skipped: false,
+    renamedFrom: uploadKey === cleanKey ? null : cleanKey,
+    originalSize: file.size,
+    uploadedSize: uploadFile.size,
+    image: isImageFile(file)
+      ? {
+          processed: uploadFile.size !== file.size || uploadFile.type !== file.type,
+          removeExif: record.uploadSettings.imageUploadSettings.removeExif,
+          outputFormat: record.uploadSettings.imageUploadSettings.outputFormat,
+        }
+      : null,
+  };
 }
 
 export async function createEndpointFolder(record: EndpointRecord, folder: string): Promise<{ key: string; publicUrl: string | null }> {
@@ -110,15 +160,12 @@ export function createPrivateLink(): Promise<PrivateLinkResponse> {
   return Promise.reject(new Error("Private signed links are only available through the D1 control-plane Worker."));
 }
 
+export function defaultUploadSettings(): UploadSettings {
+  return cloneUploadSettings(DEFAULT_UPLOAD_SETTINGS);
+}
+
 async function endpointRequest(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
-  const target = new URL(path, `${record.endPoint}/`);
-  const response = await fetch(resolveEndpointUrl(target).toString(), {
-    ...init,
-    headers: {
-      "x-api-key": record.apiKey,
-      ...init?.headers,
-    },
-  });
+  const response = await endpointFetch(record, path, init);
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
@@ -126,6 +173,133 @@ async function endpointRequest(record: EndpointRecord, path: string, init?: Requ
   }
 
   return response;
+}
+
+async function endpointFetch(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
+  const target = new URL(path, `${record.endPoint}/`);
+  return await fetch(resolveEndpointUrl(target).toString(), {
+    ...init,
+    headers: {
+      "x-api-key": record.apiKey,
+      ...init?.headers,
+    },
+  });
+}
+
+async function objectExists(record: EndpointRecord, key: string): Promise<boolean> {
+  const response = await endpointFetch(record, `/${encodeKey(key)}`, { method: "HEAD" });
+  return response.ok;
+}
+
+async function prepareUploadFile(file: File, settings: ImageUploadSettings): Promise<File | Blob> {
+  if (!isImageFile(file)) {
+    return file;
+  }
+
+  if (!settings.compressImagesBeforeUploading && !settings.removeExif) {
+    return file;
+  }
+
+  const bitmap = await createImageBitmap(file);
+  try {
+    const dimensions = settings.compressImagesBeforeUploading
+      ? fitImage(bitmap.width, bitmap.height, settings.maxWidth, settings.maxHeight)
+      : { width: bitmap.width, height: bitmap.height };
+    const canvas = document.createElement("canvas");
+    canvas.width = dimensions.width;
+    canvas.height = dimensions.height;
+
+    const context = canvas.getContext("2d");
+    if (!context) return file;
+
+    context.drawImage(bitmap, 0, 0, dimensions.width, dimensions.height);
+
+    const mimeType = toMimeType(settings.outputFormat);
+    const blob = await canvasToBlob(canvas, mimeType, settings.imageQuality);
+    if (!blob) return file;
+
+    return new File([blob], replaceExtension(file.name, settings.outputFormat), { type: mimeType });
+  } finally {
+    bitmap.close();
+  }
+}
+
+function fitImage(width: number, height: number, maxWidth: number | null, maxHeight: number | null): { width: number; height: number } {
+  const widthRatio = maxWidth ? maxWidth / width : 1;
+  const heightRatio = maxHeight ? maxHeight / height : 1;
+  const ratio = Math.min(1, widthRatio, heightRatio);
+  return { width: Math.max(1, Math.round(width * ratio)), height: Math.max(1, Math.round(height * ratio)) };
+}
+
+function toMimeType(format: ImageOutputFormat): string {
+  switch (format) {
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+  }
+}
+
+function replaceExtension(name: string, format: ImageOutputFormat): string {
+  const parts = name.split("/");
+  const last = parts.pop() ?? name;
+  const base = last.includes(".") ? last.slice(0, last.lastIndexOf(".")) : last;
+  parts.push(`${base}.${format}`);
+  return parts.join("/");
+}
+
+function isImageFile(file: File): boolean {
+  return file.type.startsWith("image/");
+}
+
+async function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
+  return await new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), type, quality));
+}
+
+function normalizeUploadSettings(value: unknown): UploadSettings {
+  const settings = value as Partial<UploadSettings> | undefined;
+  const image = (settings?.imageUploadSettings ?? {}) as Partial<ImageUploadSettings>;
+
+  return {
+    duplicateStrategy: normalizeDuplicateStrategy(settings?.duplicateStrategy),
+    imageUploadSettings: {
+      compressImagesBeforeUploading: image.compressImagesBeforeUploading ?? DEFAULT_UPLOAD_SETTINGS.imageUploadSettings.compressImagesBeforeUploading,
+      removeExif: image.removeExif ?? DEFAULT_UPLOAD_SETTINGS.imageUploadSettings.removeExif,
+      outputFormat: normalizeImageOutputFormat(image.outputFormat),
+      maxWidth: normalizeNullableNumber(image.maxWidth),
+      maxHeight: normalizeNullableNumber(image.maxHeight),
+      imageQuality: clampQuality(image.imageQuality),
+    },
+  };
+}
+
+function cloneUploadSettings(settings: UploadSettings): UploadSettings {
+  return {
+    duplicateStrategy: settings.duplicateStrategy,
+    imageUploadSettings: { ...settings.imageUploadSettings },
+  };
+}
+
+function normalizeDuplicateStrategy(value: unknown): DuplicateStrategy {
+  return value === "skip" || value === "rename" ? value : "keep";
+}
+
+function normalizeImageOutputFormat(value: unknown): ImageOutputFormat {
+  return value === "jpeg" || value === "png" ? value : "webp";
+}
+
+function normalizeNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function clampQuality(value: unknown): number {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(parsed)) return DEFAULT_UPLOAD_SETTINGS.imageUploadSettings.imageQuality;
+  return Math.min(1, Math.max(0, parsed));
 }
 
 function resolveEndpointUrl(target: URL): URL {

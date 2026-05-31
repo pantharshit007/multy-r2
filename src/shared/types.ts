@@ -2,6 +2,36 @@ export type AccessMode = "public" | "private" | "signed-link";
 
 export type BucketConnectionMode = "binding" | "endpoint" | "unconfigured";
 
+export type DuplicateStrategy = "keep" | "skip" | "rename";
+
+export type ImageOutputFormat = "webp" | "jpeg" | "png";
+
+export interface ImageUploadSettings {
+  compressImagesBeforeUploading: boolean;
+  removeExif: boolean;
+  outputFormat: ImageOutputFormat;
+  maxWidth: number | null;
+  maxHeight: number | null;
+  imageQuality: number;
+}
+
+export interface UploadSettings {
+  duplicateStrategy: DuplicateStrategy;
+  imageUploadSettings: ImageUploadSettings;
+}
+
+export const DEFAULT_UPLOAD_SETTINGS: UploadSettings = {
+  duplicateStrategy: "keep",
+  imageUploadSettings: {
+    compressImagesBeforeUploading: true,
+    removeExif: true,
+    outputFormat: "webp",
+    maxWidth: null,
+    maxHeight: null,
+    imageQuality: 0.8,
+  },
+};
+
 export interface Bucket {
   id: string;
   name: string;
@@ -47,6 +77,7 @@ export interface EndpointRecord {
   endPoint: string;
   apiKey: string;
   customDomain: string;
+  uploadSettings: UploadSettings;
 }
 
 export interface ObjectListResponse {
