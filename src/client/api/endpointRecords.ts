@@ -3,11 +3,11 @@ import type {
   ObjectListResponse,
   PrivateLinkResponse,
   R2ObjectSummary,
-} from "./shared";
-import { joinUrl } from "./shared";
+} from "../../shared";
+import { joinUrl } from "../../shared";
 
 const ENDPOINTS_STORAGE_KEY = "multy-r2:endpoints";
-const LOCAL_ENDPOINT_PROXY_PREFIX = "/__multy-r2-endpoint";
+const LOCAL_ENDPOINT_PROXY_PREFIX = "/local-r2-endpoint";
 
 export function listEndpointRecords(): EndpointRecord[] {
   const raw = localStorage.getItem(ENDPOINTS_STORAGE_KEY);
@@ -52,37 +52,6 @@ export function deleteEndpointRecord(id: string): EndpointRecord[] {
   const updated = listEndpointRecords().filter((record) => record.id !== id);
   localStorage.setItem(ENDPOINTS_STORAGE_KEY, JSON.stringify(updated));
   return updated;
-}
-
-async function endpointRequest(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
-  const target = new URL(path, `${record.endPoint}/`);
-  const response = await fetch(resolveEndpointUrl(target).toString(), {
-    ...init,
-    headers: {
-      "x-api-key": record.apiKey,
-      ...init?.headers,
-    },
-  });
-
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(text || `Request failed with ${response.status}`);
-  }
-
-  return response;
-}
-
-function resolveEndpointUrl(target: URL): URL {
-  if (import.meta.env.DEV && isLocalWorkerEndpoint(target)) {
-    return new URL(`${LOCAL_ENDPOINT_PROXY_PREFIX}${target.pathname}${target.search}`, target.origin);
-  }
-
-  return target;
-}
-
-function isLocalWorkerEndpoint(url: URL): boolean {
-  const isLoopbackHost = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1";
-  return isLoopbackHost && url.port === "8787";
 }
 
 export async function listEndpointObjects(record: EndpointRecord, cursor?: string | null): Promise<ObjectListResponse> {
@@ -139,6 +108,37 @@ export function publicUrlFor(record: EndpointRecord, key: string): string {
 
 export function createPrivateLink(): Promise<PrivateLinkResponse> {
   return Promise.reject(new Error("Private signed links are only available through the D1 control-plane Worker."));
+}
+
+async function endpointRequest(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
+  const target = new URL(path, `${record.endPoint}/`);
+  const response = await fetch(resolveEndpointUrl(target).toString(), {
+    ...init,
+    headers: {
+      "x-api-key": record.apiKey,
+      ...init?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(text || `Request failed with ${response.status}`);
+  }
+
+  return response;
+}
+
+function resolveEndpointUrl(target: URL): URL {
+  if (import.meta.env.DEV && isLocalWorkerEndpoint(target)) {
+    return new URL(`${LOCAL_ENDPOINT_PROXY_PREFIX}${target.pathname}${target.search}`, target.origin);
+  }
+
+  return target;
+}
+
+function isLocalWorkerEndpoint(url: URL): boolean {
+  const isLoopbackHost = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1";
+  return isLoopbackHost && url.port === "8787";
 }
 
 function toObjectSummary(

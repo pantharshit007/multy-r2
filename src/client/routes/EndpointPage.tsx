@@ -9,9 +9,9 @@ import {
   saveEndpointRecord,
   uploadEndpointObject,
 } from "../api";
-import type { EndpointRecord, R2ObjectSummary } from "../shared";
+import type { EndpointRecord, R2ObjectSummary } from "../../shared";
 
-export function BucketPage() {
+export function EndpointPage() {
   const { bucketId } = useParams({ from: "/buckets/$bucketId" });
   const [record, setRecord] = useState<EndpointRecord | null>(() => findRecord(bucketId));
   const [objects, setObjects] = useState<R2ObjectSummary[]>([]);

@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { FormEvent, useState } from "react";
 import { deleteEndpointRecord, listEndpointRecords, saveEndpointRecord } from "../api";
-import type { EndpointRecord } from "../shared";
+import type { EndpointRecord } from "../../shared";
 
 const EMPTY_FORM = {
   endPoint: "",
@@ -14,7 +14,7 @@ export function DashboardPage() {
   const [form, setForm] = useState(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
-  function submitBucket(event: FormEvent<HTMLFormElement>) {
+  function submitEndpoint(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
     try {
@@ -83,7 +83,7 @@ export function DashboardPage() {
       <aside className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5 shadow-2xl lg:sticky lg:top-4 lg:self-start">
         <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Add a new endpoint</p>
         <h2 className="mt-1 text-2xl font-semibold text-zinc-50">Worker endpoint</h2>
-        <form className="mt-4 grid gap-4" onSubmit={submitBucket}>
+        <form className="mt-4 grid gap-4" onSubmit={submitEndpoint}>
           <label className="grid gap-2 text-sm font-medium text-zinc-300">
             Workers Endpoint
             <input className="h-11 rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300" value={form.endPoint} onChange={(event) => setForm({ ...form, endPoint: event.target.value })} placeholder="https://bucket.user.workers.dev" required />

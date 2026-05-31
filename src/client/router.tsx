@@ -1,5 +1,5 @@
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from "@tanstack/react-router";
-import { BucketPage } from "./routes/BucketPage";
+import { EndpointPage } from "./routes/EndpointPage";
 import { DashboardPage } from "./routes/DashboardPage";
 
 function RootLayout() {
@@ -25,19 +25,19 @@ function RootLayout() {
 
 const rootRoute = createRootRoute({ component: RootLayout });
 
-const indexRoute = createRoute({
+const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: DashboardPage,
 });
 
-const bucketRoute = createRoute({
+const endpointRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/buckets/$bucketId",
-  component: BucketPage,
+  component: EndpointPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, bucketRoute]);
+const routeTree = rootRoute.addChildren([dashboardRoute, endpointRoute]);
 
 export const router = createRouter({ routeTree });
 

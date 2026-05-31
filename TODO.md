@@ -3,3 +3,5 @@
     - Skip uploading files with the same name
     - Rename each file with a random ID
     - Compress images before uploading
+- [ ] signed links?
+- [ ] why is the structure so messed up? client and server folders are within one folder + the routing is not impressive too.

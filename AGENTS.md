@@ -14,7 +14,7 @@ Multy R2 is a React UI for managing multiple r2-uploader-compatible Worker endpo
 
 ## Local Worker
 
-- `src/worker/index.ts` can act as a local endpoint for testing.
+- `src/server/worker/index.ts` can act as a local endpoint for testing.
 - It expects an R2 binding named `R2_BUCKET` or `BUCKET_A`.
 - It expects `AUTH_KEY_SECRET` in `.dev.vars` for local auth.
 - It supports `PATCH /`, `PUT /:key`, `DELETE /:key`, and `GET /:key`.
