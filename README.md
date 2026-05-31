@@ -36,7 +36,31 @@ For deployed Workers, use Wrangler secrets instead of committing secret values t
 
 ## Deployment
 
-Build with `pnpm build`. Deploy the static UI however you prefer, or keep using Vite locally.
+This project deploys as a single Cloudflare Worker that serves both the built UI assets and the API.
+
+### Option 1: Wrangler from your machine
+
+Build with `pnpm build`, then deploy with `wrangler deploy`.
+
+### Option 2: Cloudflare Workers Builds from GitHub
+
+1. Push the repo to GitHub.
+2. In Cloudflare dashboard, go to `Workers & Pages`.
+3. Create or open the Worker.
+4. Under `Settings` > `Builds`, connect the GitHub repo.
+5. Make sure the Worker name in Cloudflare matches the `name` in `wrangler.jsonc`.
+6. Set the build command to `pnpm build` and the deploy command to `wrangler deploy`.
+7. Add required secrets in Cloudflare, including `AUTH_KEY_SECRET` and `PRIVATE_LINK_SECRET`.
+8. Push to the connected branch to trigger automatic builds and deployments.
+
+### Option 3: GitHub Actions
+
+This repo includes an opt-in workflow file at `.github/workflows/deploy-cloudflare.yml.disabled`.
+
+1. Rename it to `.github/workflows/deploy-cloudflare.yml` if you want GitHub Actions deploys.
+2. Add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` as GitHub repo secrets.
+3. Set `WORKER_DEPLOY_ENABLED` to `true` in the workflow or repository variables if you want the job to run.
+4. Push to `main` to deploy.
 
 ## Notes
 
