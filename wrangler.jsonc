@@ -24,5 +24,15 @@
   ],
   "secrets": {
     "required": ["AUTH_KEY_SECRET", "PRIVATE_LINK_SECRET"]
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "logs": {
+      "enabled": true,
+      "persist": true,
+      "invocation_logs": true
+    }
   }
+
 }

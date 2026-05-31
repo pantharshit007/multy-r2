@@ -21,7 +21,7 @@ export async function routeRequest(request: Request, env: Env): Promise<Response
     }
   }
 
-  if (!isLocalEndpointRequest && shouldServeUiAssets(url)) {
+  if (!isLocalEndpointRequest && isUiAssetRequest(request) && shouldServeUiAssets(url)) {
     return env.ASSETS.fetch(request);
   }
 
@@ -36,4 +36,9 @@ export async function routeRequest(request: Request, env: Env): Promise<Response
 
 function isOptionsRequest(request: Request): boolean {
   return request.method.toUpperCase() === "OPTIONS";
+}
+
+function isUiAssetRequest(request: Request): boolean {
+  const method = request.method.toUpperCase();
+  return method === "GET" || method === "HEAD";
 }
