@@ -1,0 +1,4 @@
+- [ ] improve the whole folder structure, ui and its working can add more features (hirerachy, etc)
+- [ ] signed links?
+- [ ] why is the structure so messed up? client and server folders are within one folder + the routing is not impressive too.
+- [ ] multi select feature
