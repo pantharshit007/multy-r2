@@ -1,5 +1,6 @@
 import type {
   DuplicateStrategy,
+  EndpointBucketBinding,
   EndpointRecord,
   ImageOutputFormat,
   ImageUploadSettings,
@@ -26,6 +27,10 @@ export function listEndpointRecords(): EndpointRecord[] {
         endPoint: normalizeEndpoint(record.endPoint ?? record.endpoint ?? ""),
         apiKey: record.apiKey ?? "",
         customDomain: normalizeOptionalEndpoint(record.customDomain ?? ""),
+        workerBucketMode: record.workerBucketMode ?? false,
+        bucketId: record.bucketId ?? "",
+        bucketName: record.bucketName ?? "",
+        bucketBindingName: record.bucketBindingName ?? "",
         uploadSettings: normalizeUploadSettings(record.uploadSettings),
       }))
       .filter((record) => record.endPoint && record.apiKey);
@@ -34,7 +39,17 @@ export function listEndpointRecords(): EndpointRecord[] {
   }
 }
 
-export function saveEndpointRecord(input: Omit<EndpointRecord, "id" | "uploadSettings"> & { id?: string; uploadSettings?: Partial<UploadSettings> }): EndpointRecord[] {
+export function saveEndpointRecord(input: {
+  id?: string;
+  endPoint: string;
+  apiKey: string;
+  customDomain?: string;
+  workerBucketMode?: boolean;
+  bucketId?: string;
+  bucketName?: string;
+  bucketBindingName?: string;
+  uploadSettings?: Partial<UploadSettings>;
+}): EndpointRecord[] {
   const records = listEndpointRecords();
   const existing = input.id ? records.find((record) => record.id === input.id) : undefined;
   const next: EndpointRecord = {
@@ -42,6 +57,10 @@ export function saveEndpointRecord(input: Omit<EndpointRecord, "id" | "uploadSet
     endPoint: normalizeEndpoint(input.endPoint),
     apiKey: input.apiKey.trim(),
     customDomain: normalizeOptionalEndpoint(input.customDomain),
+    workerBucketMode: input.workerBucketMode ?? existing?.workerBucketMode ?? false,
+    bucketId: (input.workerBucketMode ?? existing?.workerBucketMode ?? false) ? normalizeOptionalText(input.bucketId ?? existing?.bucketId ?? "") : "",
+    bucketName: (input.workerBucketMode ?? existing?.workerBucketMode ?? false) ? normalizeOptionalText(input.bucketName ?? existing?.bucketName ?? "") : "",
+    bucketBindingName: (input.workerBucketMode ?? existing?.workerBucketMode ?? false) ? normalizeOptionalText(input.bucketBindingName ?? existing?.bucketBindingName ?? "") : "",
     uploadSettings: input.uploadSettings ? normalizeUploadSettings(input.uploadSettings) : existing?.uploadSettings ?? cloneUploadSettings(DEFAULT_UPLOAD_SETTINGS),
   };
 
@@ -76,6 +95,28 @@ export async function listEndpointObjects(record: EndpointRecord, cursor?: strin
     truncated: Boolean(body.truncated),
     cursor: body.cursor ?? null,
   };
+}
+
+export async function listEndpointBucketBindings(input: { endPoint: string; apiKey: string }): Promise<EndpointBucketBinding[]> {
+  const endPoint = normalizeEndpoint(input.endPoint);
+  const apiKey = input.apiKey.trim();
+
+  if (!endPoint || !apiKey) {
+    throw new Error("Endpoint and API key are required before loading buckets");
+  }
+
+  const target = new URL("/?multyBuckets=1", `${endPoint}/`);
+  const response = await fetch(resolveEndpointUrl(target).toString(), {
+    headers: { "x-api-key": apiKey },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(text || `Request failed with ${response.status}`);
+  }
+
+  const body = (await response.json()) as unknown;
+  return Array.isArray(body) ? body.map(normalizeEndpointBucketBinding).filter((bucket) => bucket !== null) : [];
 }
 
 export interface UploadEndpointObjectResult {
@@ -153,7 +194,11 @@ export async function deleteEndpointObject(record: EndpointRecord, key: string):
 }
 
 export function publicUrlFor(record: EndpointRecord, key: string): string {
-  return joinUrl(record.customDomain || record.endPoint, key);
+  const url = new URL(joinUrl(record.customDomain || record.endPoint, key));
+  if (record.workerBucketMode && record.bucketBindingName) {
+    url.searchParams.set("bucketBindingName", record.bucketBindingName);
+  }
+  return url.toString();
 }
 
 export function createPrivateLink(): Promise<PrivateLinkResponse> {
@@ -177,6 +222,9 @@ async function endpointRequest(record: EndpointRecord, path: string, init?: Requ
 
 async function endpointFetch(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
   const target = new URL(path, `${record.endPoint}/`);
+  if (record.workerBucketMode && record.bucketBindingName) {
+    target.searchParams.set("bucketBindingName", record.bucketBindingName);
+  }
   return await fetch(resolveEndpointUrl(target).toString(), {
     ...init,
     headers: {
@@ -334,8 +382,26 @@ function normalizeEndpoint(value: string): string {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function normalizeOptionalEndpoint(value: string): string {
-  return value.trim() ? normalizeEndpoint(value) : "";
+function normalizeEndpointBucketBinding(value: unknown): EndpointBucketBinding | null {
+  if (!value || typeof value !== "object") return null;
+  const bucket = value as Partial<EndpointBucketBinding>;
+  const bindingName = normalizeOptionalText(bucket.bindingName);
+  if (!/^[A-Z][A-Z0-9_]*$/.test(bindingName)) return null;
+
+  return {
+    id: normalizeOptionalText(bucket.id) || bindingName,
+    name: normalizeOptionalText(bucket.name) || bindingName,
+    bindingName,
+  };
+}
+
+function normalizeOptionalEndpoint(value: string | null | undefined): string {
+  const trimmed = (value ?? "").trim();
+  return trimmed ? normalizeEndpoint(trimmed) : "";
+}
+
+function normalizeOptionalText(value: string | null | undefined): string {
+  return (value ?? "").trim();
 }
 
 function sanitizeKey(value: string): string {

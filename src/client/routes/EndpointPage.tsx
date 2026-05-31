@@ -10,6 +10,7 @@ import {
   uploadEndpointObject,
 } from "../api";
 import type { DuplicateStrategy, EndpointRecord, ImageOutputFormat, R2ObjectSummary } from "../../shared";
+import { WorkerBucketPicker } from "../components/WorkerBucketPicker";
 
 export function EndpointPage() {
   const { bucketId } = useParams({ from: "/buckets/$bucketId" });
@@ -84,7 +85,12 @@ export function EndpointPage() {
             <h1 className="mt-1 break-all text-3xl font-semibold tracking-tight text-zinc-50">{record.customDomain || record.endPoint}</h1>
             <p className="mt-2 break-all text-sm text-zinc-500">{record.endPoint}</p>
           </div>
-          <span className="w-fit rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs text-amber-200">x-api-key configured</span>
+          <div className="flex flex-wrap gap-2">
+            {record.workerBucketMode ? (
+              <span className="w-fit rounded-full border border-green-400/30 bg-green-400/10 px-3 py-1 text-xs text-green-200">bucket {record.bucketBindingName || record.bucketName || "selected"}</span>
+            ) : null}
+            <span className="w-fit rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs text-amber-200">x-api-key configured</span>
+          </div>
         </div>
       </section>
 
@@ -152,7 +158,19 @@ export function EndpointPage() {
         ) : null}
       </section>
 
-      <SettingsPanel record={record} onUpdated={setRecord} onError={setError} onStatus={setStatus} />
+      <SettingsPanel
+        record={record}
+        onUpdated={(next) => {
+          const bucketChanged = next.workerBucketMode !== record.workerBucketMode || next.bucketBindingName !== record.bucketBindingName;
+          setRecord(next);
+          if (bucketChanged) {
+            setStatus(`Switched to ${next.bucketBindingName || "default bucket"}`);
+            void refreshObjects(next);
+          }
+        }}
+        onError={setError}
+        onStatus={setStatus}
+      />
     </main>
   );
 }
@@ -478,6 +496,28 @@ function SettingsPanel({
           Custom Domain
           <input className="h-11 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none ring-0 focus:border-amber-300" value={form.customDomain} onChange={(event) => updateForm({ ...form, customDomain: event.target.value })} />
         </label>
+        <WorkerBucketPicker
+          enabled={form.workerBucketMode}
+          endpoint={form.endPoint}
+          apiKey={form.apiKey}
+          bucketId={form.bucketId}
+          bucketName={form.bucketName}
+          bucketBindingName={form.bucketBindingName}
+          onEnabledChange={(enabled) => updateForm({
+            ...form,
+            workerBucketMode: enabled,
+            bucketId: enabled ? form.bucketId : "",
+            bucketName: enabled ? form.bucketName : "",
+            bucketBindingName: enabled ? form.bucketBindingName : "",
+          })}
+          onBucketChange={(bucket) => updateForm({
+            ...form,
+            workerBucketMode: form.workerBucketMode,
+            bucketId: bucket?.id ?? "",
+            bucketName: bucket?.name ?? "",
+            bucketBindingName: bucket?.bindingName ?? "",
+          })}
+        />
         <label className="grid gap-2 text-sm font-medium text-zinc-300">
           Duplicate Handling
           <select

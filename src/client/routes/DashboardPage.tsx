@@ -2,16 +2,31 @@ import { Link } from "@tanstack/react-router";
 import { FormEvent, useState } from "react";
 import { deleteEndpointRecord, listEndpointRecords, saveEndpointRecord } from "../api";
 import type { EndpointRecord } from "../../shared";
+import { WorkerBucketPicker } from "../components/WorkerBucketPicker";
 
-const EMPTY_FORM = {
+type EndpointForm = {
+  endPoint: string;
+  apiKey: string;
+  customDomain: string;
+  workerBucketMode: boolean;
+  bucketId: string;
+  bucketName: string;
+  bucketBindingName: string;
+};
+
+const EMPTY_FORM: EndpointForm = {
   endPoint: "",
   apiKey: "",
   customDomain: "",
+  workerBucketMode: false,
+  bucketId: "",
+  bucketName: "",
+  bucketBindingName: "",
 };
 
 export function DashboardPage() {
   const [records, setRecords] = useState<EndpointRecord[]>(() => listEndpointRecords());
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState<EndpointForm>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
   function submitEndpoint(event: FormEvent<HTMLFormElement>) {
@@ -71,6 +86,9 @@ export function DashboardPage() {
               </Link>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs text-amber-200">endpoint</span>
+                {record.workerBucketMode ? (
+                  <span className="rounded-full border border-green-400/30 bg-green-400/10 px-2.5 py-1 text-xs text-green-200">{record.bucketBindingName || record.bucketName || "multi-bucket"}</span>
+                ) : null}
                 <button className="rounded-full border border-red-900/70 px-2.5 py-1 text-xs text-red-300 hover:bg-red-950/40" type="button" onClick={() => removeRecord(record.id)}>
                   Remove
                 </button>
@@ -108,8 +126,34 @@ export function DashboardPage() {
               placeholder="https://r2.example.com"
             />
           </label>
+          <WorkerBucketPicker
+            enabled={form.workerBucketMode}
+            endpoint={form.endPoint}
+            apiKey={form.apiKey}
+            bucketId={form.bucketId}
+            bucketName={form.bucketName}
+            bucketBindingName={form.bucketBindingName}
+            onEnabledChange={(enabled) =>
+              setForm({
+                ...form,
+                workerBucketMode: enabled,
+                bucketId: enabled ? form.bucketId : "",
+                bucketName: enabled ? form.bucketName : "",
+                bucketBindingName: enabled ? form.bucketBindingName : "",
+              })
+            }
+            onBucketChange={(bucket) =>
+              setForm((current) => ({
+                ...current,
+                workerBucketMode: Boolean(bucket),
+                bucketId: bucket?.id ?? "",
+                bucketName: bucket?.name ?? "",
+                bucketBindingName: bucket?.bindingName ?? "",
+              }))
+            }
+          />
           <p className="text-sm leading-6 text-zinc-500">
-            No Worker binding is needed for this endpoint mode. The endpoint Worker already knows its bucket.
+            Check this when the Worker owns multiple buckets. Then pick the bucket from the dropdown and the app will use that binding for this endpoint.
           </p>
           <button className="h-11 rounded-xl bg-zinc-50 px-4 text-sm font-semibold text-zinc-950 hover:bg-amber-200" type="submit">
             Save To LocalStorage

@@ -46,6 +46,12 @@ export interface Bucket {
   updatedAt: string;
 }
 
+export interface EndpointBucketBinding {
+  id: string;
+  name: string;
+  bindingName: string;
+}
+
 export interface BucketInput {
   name: string;
   bindingName?: string | null;
@@ -77,6 +83,10 @@ export interface EndpointRecord {
   endPoint: string;
   apiKey: string;
   customDomain: string;
+  workerBucketMode: boolean;
+  bucketId: string;
+  bucketName: string;
+  bucketBindingName: string;
   uploadSettings: UploadSettings;
 }
 

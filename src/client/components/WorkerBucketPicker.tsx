@@ -1,0 +1,142 @@
+import { useEffect, useRef, useState } from "react";
+import { listEndpointBucketBindings } from "../api";
+import type { EndpointBucketBinding } from "../../shared";
+
+export function WorkerBucketPicker({
+  enabled,
+  endpoint,
+  apiKey,
+  bucketId,
+  bucketName,
+  bucketBindingName,
+  onEnabledChange,
+  onBucketChange,
+}: {
+  enabled: boolean;
+  endpoint: string;
+  apiKey: string;
+  bucketId: string;
+  bucketName: string;
+  bucketBindingName: string;
+  onEnabledChange: (enabled: boolean) => void;
+  onBucketChange: (bucket: EndpointBucketBinding | null) => void;
+}) {
+  const [buckets, setBuckets] = useState<EndpointBucketBinding[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const onBucketChangeRef = useRef(onBucketChange);
+
+  useEffect(() => {
+    onBucketChangeRef.current = onBucketChange;
+  }, [onBucketChange]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setBuckets([]);
+      setLoading(false);
+      setError(null);
+      setStatus(null);
+      return;
+    }
+
+    const normalized = normalizeApiBase(endpoint);
+    if (!normalized || !apiKey.trim()) {
+      setBuckets([]);
+      setError(null);
+      setStatus(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const list = await listEndpointBucketBindings({ endPoint: normalized, apiKey });
+        if (cancelled) return;
+
+        setBuckets(list);
+        setStatus(list.length ? `Verified ${list.length} bound bucket${list.length === 1 ? "" : "s"}` : "No R2 bucket bindings found on this Worker");
+
+        const next = list.find((item) => item.id === bucketId || item.bindingName === bucketBindingName) ?? list[0] ?? null;
+        if (next && (next.id !== bucketId || next.bindingName !== bucketBindingName)) {
+          onBucketChangeRef.current(next);
+        }
+      } catch (cause) {
+        if (cancelled) return;
+        setBuckets([]);
+        setError(cause instanceof Error ? cause.message : "Could not verify Worker buckets");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [enabled, endpoint, apiKey, bucketId, bucketBindingName]);
+
+  const selectedBucketId = buckets.find((bucket) => bucket.id === bucketId || bucket.bindingName === bucketBindingName)?.id ?? "";
+
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <label className="flex items-start justify-between gap-4">
+        <span>
+          <span className="block text-sm font-medium text-zinc-100">Multy multi-bucket Worker</span>
+          <span className="mt-1 block text-xs leading-5 text-zinc-500">
+            Check this when the endpoint is this app's Worker and should expose its active R2 bindings with the same API key.
+          </span>
+        </span>
+        <input className="mt-1 h-4 w-4 accent-amber-300" type="checkbox" checked={enabled} onChange={(event) => onEnabledChange(event.target.checked)} />
+      </label>
+
+      {enabled ? (
+        <div className="mt-4 grid gap-3">
+          <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.16em] text-zinc-500">
+            <span>Bucket</span>
+            <span>{loading ? "Verifying..." : bucketBindingName || bucketName || "Select one"}</span>
+          </div>
+
+          <select
+            className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300"
+            value={selectedBucketId}
+            onChange={(event) => {
+              const next = buckets.find((item) => item.id === event.target.value) ?? null;
+              onBucketChangeRef.current(next);
+            }}
+            disabled={!buckets.length || loading}
+          >
+            <option value="">{loading ? "Checking Worker bindings..." : "Select a bound bucket"}</option>
+            {buckets.map((bucket) => (
+              <option key={bucket.id} value={bucket.id}>
+                {bucket.name}
+              </option>
+            ))}
+          </select>
+
+          {error ? <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">{error}</div> : null}
+          {status ? <div className="rounded-xl border border-green-900/60 bg-green-950/40 p-3 text-sm text-green-200">{status}</div> : null}
+          {!loading && !error && buckets.length === 0 ? (
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 text-sm text-zinc-500">
+              No buckets loaded yet.
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function normalizeApiBase(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) return "";
+
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    return new URL(withProtocol).toString().replace(/\/+$/, "");
+  } catch {
+    return "";
+  }
+}

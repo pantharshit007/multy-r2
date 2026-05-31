@@ -1,0 +1,113 @@
+import type { Bucket, ObjectListResponse, PrivateLinkResponse, R2ObjectSummary } from "../../shared";
+
+const ADMIN_STORAGE_KEY = "multy-r2:admin-api";
+
+export interface AdminApiConfig {
+  apiBase: string;
+  apiKey: string;
+}
+
+export function loadAdminApiConfig(): AdminApiConfig {
+  const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
+  const fallbackBase = window.location.origin;
+
+  if (!raw) {
+    return { apiBase: fallbackBase, apiKey: "" };
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<AdminApiConfig>;
+    return {
+      apiBase: normalizeApiBase(parsed.apiBase ?? fallbackBase),
+      apiKey: parsed.apiKey ?? "",
+    };
+  } catch {
+    return { apiBase: fallbackBase, apiKey: "" };
+  }
+}
+
+export function saveAdminApiConfig(input: AdminApiConfig): AdminApiConfig {
+  const next: AdminApiConfig = {
+    apiBase: normalizeApiBase(input.apiBase),
+    apiKey: input.apiKey.trim(),
+  };
+
+  localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(next));
+  return next;
+}
+
+export async function listAdminBuckets(config: AdminApiConfig): Promise<Bucket[]> {
+  return await adminRequestJson<Bucket[]>(config, "/api/buckets");
+}
+
+export async function listAdminBucketObjects(config: AdminApiConfig, bucketId: string, cursor?: string | null): Promise<ObjectListResponse> {
+  const params = new URLSearchParams();
+  if (cursor) params.set("cursor", cursor);
+  return await adminRequestJson<ObjectListResponse>(config, params.size ? `/api/buckets/${encodeURIComponent(bucketId)}/objects?${params}` : `/api/buckets/${encodeURIComponent(bucketId)}/objects`);
+}
+
+export async function uploadAdminBucketObject(config: AdminApiConfig, bucketId: string, file: File, key: string): Promise<{ key: string; publicUrl: string | null }> {
+  const form = new FormData();
+  form.set("file", file);
+  form.set("key", key);
+
+  return await adminRequestJson<{ key: string; publicUrl: string | null }>(config, `/api/buckets/${encodeURIComponent(bucketId)}/upload`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export async function deleteAdminBucketObject(config: AdminApiConfig, bucketId: string, key: string): Promise<void> {
+  await adminRequest(config, `/api/buckets/${encodeURIComponent(bucketId)}/objects/${encodeKey(key)}`, {
+    method: "DELETE",
+  });
+}
+
+export async function createAdminPrivateLink(config: AdminApiConfig, bucketId: string, key: string, expires = 3600): Promise<PrivateLinkResponse> {
+  return await adminRequestJson<PrivateLinkResponse>(config, `/api/buckets/${encodeURIComponent(bucketId)}/private-link/${encodeKey(key)}?expires=${expires}`);
+}
+
+export function publicUrlForBucket(bucket: Bucket, key: string): string | null {
+  if (!bucket.publicBaseUrl) return null;
+  return joinUrl(bucket.publicBaseUrl, key);
+}
+
+async function adminRequestJson<T>(config: AdminApiConfig, path: string, init?: RequestInit): Promise<T> {
+  const response = await adminRequest(config, path, init);
+  return (await response.json()) as T;
+}
+
+async function adminRequest(config: AdminApiConfig, path: string, init?: RequestInit): Promise<Response> {
+  if (!config.apiKey) {
+    throw new Error("Set the worker admin key first");
+  }
+
+  const response = await fetch(new URL(path, `${normalizeApiBase(config.apiBase)}/`).toString(), {
+    ...init,
+    headers: {
+      "x-api-key": config.apiKey,
+      ...init?.headers,
+    },
+  });
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    throw new Error(text || `Request failed with ${response.status}`);
+  }
+
+  return response;
+}
+
+function normalizeApiBase(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) return window.location.origin;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+function joinUrl(base: string, path: string): string {
+  return new URL(path, `${base.replace(/\/+$/, "")}/`).toString();
+}
+
+function encodeKey(key: string): string {
+  return key.split("/").map(encodeURIComponent).join("/");
+}

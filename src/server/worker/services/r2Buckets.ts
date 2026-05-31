@@ -1,4 +1,4 @@
-import type { Bucket } from "../../../shared";
+import type { Bucket, EndpointBucketBinding } from "../../../shared";
 import type { Env } from "../env";
 import { ApiError } from "../errors";
 
@@ -24,6 +24,29 @@ export function getDefaultEndpointBucket(env: Env): R2Bucket {
   return bucket;
 }
 
+export function getSelectedEndpointBucket(env: Env, bucketBindingName: string | null): R2Bucket {
+  const bindingName = normalizeBucketBindingName(bucketBindingName);
+  if (!bindingName) return getDefaultEndpointBucket(env);
+
+  const bucket = env[bindingName];
+  if (!isR2Bucket(bucket)) {
+    throw new ApiError(400, `R2 binding '${bindingName}' is not configured on this Worker`);
+  }
+
+  return bucket;
+}
+
+export function listEndpointBucketBindings(env: Env): EndpointBucketBinding[] {
+  return Object.entries(env)
+    .filter(([, value]) => isR2Bucket(value))
+    .map(([bindingName]) => ({
+      id: bindingName,
+      name: bindingName,
+      bindingName,
+    }))
+    .sort((left, right) => bucketBindingSortRank(left.bindingName) - bucketBindingSortRank(right.bindingName) || left.bindingName.localeCompare(right.bindingName));
+}
+
 function isR2Bucket(value: unknown): value is R2Bucket {
   return Boolean(
     value &&
@@ -33,4 +56,20 @@ function isR2Bucket(value: unknown): value is R2Bucket {
       "get" in value &&
       "delete" in value,
   );
+}
+
+function normalizeBucketBindingName(value: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!/^[A-Z][A-Z0-9_]*$/.test(trimmed)) {
+    throw new ApiError(400, "bucketId must look like BUCKET_A or BUCKET_B");
+  }
+  return trimmed;
+}
+
+function bucketBindingSortRank(bindingName: string): number {
+  if (bindingName === "R2_BUCKET") return 0;
+  if (bindingName === "BUCKET_A") return 1;
+  return 2;
 }

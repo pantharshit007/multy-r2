@@ -16,5 +16,9 @@ export function normalizeEndpointUrl(url: URL): URL {
 }
 
 export function shouldServeUiAssets(url: URL): boolean {
-  return url.pathname === "/" || url.pathname.startsWith("/assets/") || url.pathname.startsWith("/buckets/");
+  return (
+    url.pathname === "/" ||
+    url.pathname.startsWith("/assets/") ||
+    url.pathname.startsWith("/buckets/")
+  );
 }

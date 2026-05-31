@@ -2,17 +2,23 @@ import type { Env } from "../env";
 import { ApiError } from "../errors";
 import { CORS_HEADERS, json } from "../http";
 import { authorizeEndpointRequest } from "../middleware/auth";
-import { getDefaultEndpointBucket } from "../services/r2Buckets";
+import { getSelectedEndpointBucket, listEndpointBucketBindings } from "../services/r2Buckets";
 import { guessContentTypeFromKey } from "../utils/contentType";
 import { sanitizeObjectKey } from "../utils/objectKeys";
 
 export async function handleEndpointApi(request: Request, env: Env, url: URL): Promise<Response> {
   const method = request.method.toUpperCase();
-  const bucket = getDefaultEndpointBucket(env);
 
   if (url.pathname === "/" && method === "GET") {
+    if (url.searchParams.get("multyBuckets") === "1") {
+      authorizeEndpointRequest(request, env);
+      return json(listEndpointBucketBindings(env));
+    }
+
     return new Response("Multy R2 endpoint worker", { headers: CORS_HEADERS });
   }
+
+  const bucket = getSelectedEndpointBucket(env, url.searchParams.get("bucketBindingName"));
 
   if (url.pathname === "/" && method === "PATCH") {
     authorizeEndpointRequest(request, env);

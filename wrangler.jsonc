@@ -20,6 +20,10 @@
   {
     "binding": "BUCKET_A",
     "bucket_name": "shottr-bucket"
+  },
+  {
+    "binding": "BUCKET_B",
+    "bucket_name": "mine"
   }
   ],
   "secrets": {
