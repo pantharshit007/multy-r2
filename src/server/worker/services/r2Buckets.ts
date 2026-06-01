@@ -36,14 +36,26 @@ export function getSelectedEndpointBucket(env: Env, bucketBindingName: string | 
   return bucket;
 }
 
-export function listEndpointBucketBindings(env: Env): EndpointBucketBinding[] {
-  return Object.entries(env)
-    .filter(([, value]) => isR2Bucket(value))
-    .map(([bindingName]) => ({
-      id: bindingName,
-      name: bindingName,
-      bindingName,
-    }))
+export async function listEndpointBucketBindings(env: Env): Promise<EndpointBucketBinding[]> {
+  const bindings = await Promise.all(
+    Object.entries(env).map(async ([bindingName, value]) => {
+      if (!isR2Bucket(value)) return null;
+
+      try {
+        await value.list({ limit: 1 });
+        return {
+          id: bindingName,
+          name: bindingName,
+          bindingName,
+        } satisfies EndpointBucketBinding;
+      } catch {
+        return null;
+      }
+    }),
+  );
+
+  return bindings
+    .filter((binding) => binding !== null)
     .sort((left, right) => bucketBindingSortRank(left.bindingName) - bucketBindingSortRank(right.bindingName) || left.bindingName.localeCompare(right.bindingName));
 }
 
@@ -51,10 +63,16 @@ function isR2Bucket(value: unknown): value is R2Bucket {
   return Boolean(
     value &&
       typeof value === "object" &&
+      "head" in value &&
       "list" in value &&
       "put" in value &&
       "get" in value &&
-      "delete" in value,
+      "delete" in value &&
+      typeof value.head === "function" &&
+      typeof value.list === "function" &&
+      typeof value.put === "function" &&
+      typeof value.get === "function" &&
+      typeof value.delete === "function",
   );
 }
 

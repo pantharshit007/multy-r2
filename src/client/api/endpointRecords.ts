@@ -52,15 +52,19 @@ export function saveEndpointRecord(input: {
 }): EndpointRecord[] {
   const records = listEndpointRecords();
   const existing = input.id ? records.find((record) => record.id === input.id) : undefined;
+  const workerBucketMode = input.workerBucketMode ?? existing?.workerBucketMode ?? false;
+  const bucketId = workerBucketMode ? normalizeOptionalText(input.bucketId ?? existing?.bucketId ?? "") : "";
+  const bucketName = workerBucketMode ? normalizeOptionalText(input.bucketName ?? existing?.bucketName ?? "") : "";
+  const bucketBindingName = workerBucketMode ? normalizeBucketBindingName(input.bucketBindingName ?? existing?.bucketBindingName ?? "") : "";
   const next: EndpointRecord = {
     id: input.id ?? crypto.randomUUID(),
     endPoint: normalizeEndpoint(input.endPoint),
     apiKey: input.apiKey.trim(),
     customDomain: normalizeOptionalEndpoint(input.customDomain),
-    workerBucketMode: input.workerBucketMode ?? existing?.workerBucketMode ?? false,
-    bucketId: (input.workerBucketMode ?? existing?.workerBucketMode ?? false) ? normalizeOptionalText(input.bucketId ?? existing?.bucketId ?? "") : "",
-    bucketName: (input.workerBucketMode ?? existing?.workerBucketMode ?? false) ? normalizeOptionalText(input.bucketName ?? existing?.bucketName ?? "") : "",
-    bucketBindingName: (input.workerBucketMode ?? existing?.workerBucketMode ?? false) ? normalizeOptionalText(input.bucketBindingName ?? existing?.bucketBindingName ?? "") : "",
+    workerBucketMode,
+    bucketId,
+    bucketName,
+    bucketBindingName,
     uploadSettings: input.uploadSettings ? normalizeUploadSettings(input.uploadSettings) : existing?.uploadSettings ?? cloneUploadSettings(DEFAULT_UPLOAD_SETTINGS),
   };
 
@@ -115,7 +119,18 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
     throw new Error(text || `Request failed with ${response.status}`);
   }
 
-  const body = (await response.json()) as unknown;
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.toLowerCase().includes("application/json")) {
+    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /?multyBuckets=1.");
+  }
+
+  let body: unknown;
+  try {
+    body = (await response.json()) as unknown;
+  } catch {
+    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /?multyBuckets=1.");
+  }
+
   return Array.isArray(body) ? body.map(normalizeEndpointBucketBinding).filter((bucket) => bucket !== null) : [];
 }
 
@@ -393,6 +408,11 @@ function normalizeEndpointBucketBinding(value: unknown): EndpointBucketBinding |
     name: normalizeOptionalText(bucket.name) || bindingName,
     bindingName,
   };
+}
+
+function normalizeBucketBindingName(value: string | null | undefined): string {
+  const trimmed = normalizeOptionalText(value);
+  return /^[A-Z][A-Z0-9_]*$/.test(trimmed) ? trimmed : "";
 }
 
 function normalizeOptionalEndpoint(value: string | null | undefined): string {

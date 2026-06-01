@@ -12,7 +12,7 @@ export async function handleEndpointApi(request: Request, env: Env, url: URL): P
   if (url.pathname === "/" && method === "GET") {
     if (url.searchParams.get("multyBuckets") === "1") {
       authorizeEndpointRequest(request, env);
-      return json(listEndpointBucketBindings(env));
+      return json(await listEndpointBucketBindings(env));
     }
 
     return new Response("Multy R2 endpoint worker", { headers: CORS_HEADERS });

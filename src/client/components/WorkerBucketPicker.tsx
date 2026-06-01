@@ -60,6 +60,10 @@ export function WorkerBucketPicker({
         setStatus(list.length ? `Verified ${list.length} bound bucket${list.length === 1 ? "" : "s"}` : "No R2 bucket bindings found on this Worker");
 
         const next = list.find((item) => item.id === bucketId || item.bindingName === bucketBindingName) ?? list[0] ?? null;
+        if (!next && (bucketId || bucketBindingName || bucketName)) {
+          onBucketChangeRef.current(null);
+        }
+
         if (next && (next.id !== bucketId || next.bindingName !== bucketBindingName)) {
           onBucketChangeRef.current(next);
         }
