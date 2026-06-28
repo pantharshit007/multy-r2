@@ -19,6 +19,7 @@ export const DEFAULT_R2_BINDING_NAMES = ["R2_BUCKET", "BUCKET_A"] as const;
 export const R2_PROBE_LIMIT = 1;
 export const DEFAULT_BUCKET_ACCESS_MODE = "public" as const;
 export const DEFAULT_BUCKET_SORT_ORDER = 0;
+export const ACCESS_MODES = ["public", "private", "signed-link"] as const;
 
 // Misc
 export const HEALTH_CHECK_MESSAGE = "Multy R2 endpoint worker";

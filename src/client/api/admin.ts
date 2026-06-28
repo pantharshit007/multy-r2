@@ -2,7 +2,7 @@ import type { Bucket, ObjectListResponse, PrivateLinkResponse, R2ObjectSummary }
 import { joinUrl } from "../../shared/utils/url";
 import { encodeKey } from "../../shared/utils/objectKeys";
 import { API_KEY_HEADER, DEFAULT_PRIVATE_LINK_TTL_SECONDS } from "../../shared/constants";
-import { normalizeApiBase } from "../lib/endpointResolver";
+import { resolveApiBase } from "../lib/endpointResolver";
 import { ADMIN_STORAGE_KEY } from "../constants";
 
 export interface AdminApiConfig {
@@ -21,7 +21,7 @@ export function loadAdminApiConfig(): AdminApiConfig {
   try {
     const parsed = JSON.parse(raw) as Partial<AdminApiConfig>;
     return {
-      apiBase: normalizeApiBase(parsed.apiBase ?? fallbackBase),
+      apiBase: resolveApiBase(parsed.apiBase ?? fallbackBase),
       apiKey: parsed.apiKey ?? "",
     };
   } catch {
@@ -31,7 +31,7 @@ export function loadAdminApiConfig(): AdminApiConfig {
 
 export function saveAdminApiConfig(input: AdminApiConfig): AdminApiConfig {
   const next: AdminApiConfig = {
-    apiBase: normalizeApiBase(input.apiBase),
+    apiBase: resolveApiBase(input.apiBase),
     apiKey: input.apiKey.trim(),
   };
 
@@ -85,7 +85,7 @@ async function adminRequest(config: AdminApiConfig, path: string, init?: Request
     throw new Error("Set the worker admin key first");
   }
 
-  const response = await fetch(new URL(path, `${normalizeApiBase(config.apiBase)}/`).toString(), {
+  const response = await fetch(new URL(path, `${resolveApiBase(config.apiBase)}/`).toString(), {
     ...init,
     headers: {
       [API_KEY_HEADER]: config.apiKey,

@@ -1,6 +1,6 @@
 import type { AccessMode, Bucket, BucketInput, BucketPatchInput } from "../../shared";
 import { BINDING_NAME_REGEX } from "../../shared/constants";
-import { DEFAULT_BUCKET_ACCESS_MODE, DEFAULT_BUCKET_SORT_ORDER } from "../constants";
+import { ACCESS_MODES, DEFAULT_BUCKET_ACCESS_MODE, DEFAULT_BUCKET_SORT_ORDER } from "../constants";
 import type { Env } from "../env";
 import { ApiError } from "../errors";
 import { trimToNull } from "../utils/request";
@@ -17,7 +17,7 @@ interface DbBucket {
   updated_at: string;
 }
 
-const ACCESS_MODES = new Set<AccessMode>(["public", "private", "signed-link"]);
+const ACCESS_MODE_SET = new Set<AccessMode>(ACCESS_MODES);
 
 export async function listBuckets(env: Env): Promise<Bucket[]> {
   const result = await env.DB.prepare(
@@ -159,7 +159,7 @@ function normalizeBindingName(value: unknown): string | null {
 }
 
 function normalizeAccessMode(value: unknown): AccessMode {
-  if (typeof value !== "string" || !ACCESS_MODES.has(value as AccessMode)) {
+  if (typeof value !== "string" || !ACCESS_MODE_SET.has(value as AccessMode)) {
     throw new ApiError(400, "Access mode must be public, private, or signed-link");
   }
   return value as AccessMode;

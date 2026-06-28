@@ -222,7 +222,7 @@ export async function deleteEndpointObject(record: EndpointRecord, key: string):
 export function publicUrlFor(record: EndpointRecord, key: string): string {
   const base = record.customDomain || record.endPoint;
   if (record.workerBucketMode && record.bucketBindingName) {
-    const url = new URL(joinUrl(base, `bucket/${record.bucketBindingName}/${key}`));
+    const url = new URL(joinUrl(base, `bucket/${encodeURIComponent(record.bucketBindingName)}/${key}`));
     return resolveEndpointUrl(url).toString();
   }
   const url = new URL(joinUrl(base, key));
@@ -250,7 +250,7 @@ async function endpointRequest(record: EndpointRecord, path: string, init?: Requ
 
 async function endpointFetch(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
   const prefix = record.workerBucketMode && record.bucketBindingName
-    ? `/bucket/${record.bucketBindingName}`
+    ? `/bucket/${encodeURIComponent(record.bucketBindingName)}`
     : "";
   const target = new URL(`${prefix}${path}`, `${record.endPoint}/`);
   return await fetch(resolveEndpointUrl(target).toString(), {

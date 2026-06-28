@@ -1,9 +1,13 @@
-const INTERNAL_PROXY_PREFIX = "/_internal/proxy";
+import { EMPTY_API_BASE, FALLBACK_API_BASE, INTERNAL_PROXY_PREFIX } from "../constants";
 
 export function normalizeApiBase(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "");
-  if (!trimmed) return window.location.origin;
+  if (!trimmed) return EMPTY_API_BASE;
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+export function resolveApiBase(value: string): string {
+  return normalizeApiBase(value) || window.location.origin || FALLBACK_API_BASE;
 }
 
 export function normalizeEndpoint(value: string): string {

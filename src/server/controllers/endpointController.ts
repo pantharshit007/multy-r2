@@ -12,9 +12,9 @@ function parseBucketPath(pathname: string): { bindingName: string; objectPath: s
   const rest = pathname.slice(BUCKET_PATH_PREFIX.length);
   const slashIndex = rest.indexOf("/");
   if (slashIndex < 0) {
-    return { bindingName: rest, objectPath: "/" };
+    return { bindingName: decodeURIComponent(rest), objectPath: "/" };
   }
-  return { bindingName: rest.slice(0, slashIndex), objectPath: `/${rest.slice(slashIndex + 1)}` };
+  return { bindingName: decodeURIComponent(rest.slice(0, slashIndex)), objectPath: `/${rest.slice(slashIndex + 1)}` };
 }
 
 export async function handleEndpointApi(request: Request, env: Env, url: URL): Promise<Response> {
