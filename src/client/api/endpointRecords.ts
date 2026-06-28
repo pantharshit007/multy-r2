@@ -12,7 +12,7 @@ import type {
 import { DEFAULT_UPLOAD_SETTINGS, joinUrl } from "../../shared";
 
 const ENDPOINTS_STORAGE_KEY = "multy-r2:endpoints";
-const LOCAL_ENDPOINT_PROXY_PREFIX = "/local-r2-endpoint";
+const INTERNAL_ENDPOINT_PROXY_PREFIX = "/_multy/endpoint";
 
 export function listEndpointRecords(): EndpointRecord[] {
   const raw = localStorage.getItem(ENDPOINTS_STORAGE_KEY);
@@ -109,7 +109,7 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
     throw new Error("Endpoint and API key are required before loading buckets");
   }
 
-  const target = new URL("/?multyBuckets=1", `${endPoint}/`);
+  const target = new URL("/endpoint/buckets", `${endPoint}/`);
   const response = await fetch(resolveEndpointUrl(target).toString(), {
     headers: { "x-api-key": apiKey },
   });
@@ -121,14 +121,14 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
-    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /?multyBuckets=1.");
+    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /endpoint/buckets.");
   }
 
   let body: unknown;
   try {
     body = (await response.json()) as unknown;
   } catch {
-    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /?multyBuckets=1.");
+    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /endpoint/buckets.");
   }
 
   return Array.isArray(body) ? body.map(normalizeEndpointBucketBinding).filter((bucket) => bucket !== null) : [];
@@ -213,7 +213,7 @@ export function publicUrlFor(record: EndpointRecord, key: string): string {
   if (record.workerBucketMode && record.bucketBindingName) {
     url.searchParams.set("bucketBindingName", record.bucketBindingName);
   }
-  return url.toString();
+  return resolveEndpointUrl(url).toString();
 }
 
 export function createPrivateLink(): Promise<PrivateLinkResponse> {
@@ -366,16 +366,16 @@ function clampQuality(value: unknown): number {
 }
 
 function resolveEndpointUrl(target: URL): URL {
-  if (import.meta.env.DEV && isLocalWorkerEndpoint(target)) {
-    return new URL(`${LOCAL_ENDPOINT_PROXY_PREFIX}${target.pathname}${target.search}`, target.origin);
+  if (isSameOriginEndpoint(target)) {
+    return new URL(`${INTERNAL_ENDPOINT_PROXY_PREFIX}${target.pathname}${target.search}`, target.origin);
   }
 
   return target;
 }
 
-function isLocalWorkerEndpoint(url: URL): boolean {
-  const isLoopbackHost = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname === "::1";
-  return isLoopbackHost && url.port === "8787";
+function isSameOriginEndpoint(url: URL): boolean {
+  const currentOrigin = globalThis.location?.origin;
+  return Boolean(currentOrigin && url.origin === currentOrigin);
 }
 
 function toObjectSummary(
