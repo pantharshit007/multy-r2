@@ -1,4 +1,6 @@
-import type { AccessMode, Bucket, BucketInput, BucketPatchInput } from "../../../shared";
+import type { AccessMode, Bucket, BucketInput, BucketPatchInput } from "../../shared";
+import { BINDING_NAME_REGEX } from "../../shared/constants";
+import { DEFAULT_BUCKET_ACCESS_MODE, DEFAULT_BUCKET_SORT_ORDER } from "../constants";
 import type { Env } from "../env";
 import { ApiError } from "../errors";
 import { trimToNull } from "../utils/request";
@@ -122,7 +124,7 @@ function parseBucketInput(input: BucketInput): Required<BucketInput> {
     bindingName: normalizeBindingName(input.bindingName),
     endpoint: normalizeUrl(input.endpoint),
     customDomain: normalizeUrl(input.customDomain),
-    accessMode: normalizeAccessMode(input.accessMode ?? "public"),
+    accessMode: normalizeAccessMode(input.accessMode ?? DEFAULT_BUCKET_ACCESS_MODE),
     sortOrder: normalizeSortOrder(input.sortOrder),
   };
 }
@@ -150,7 +152,7 @@ function parseBucketPatchInput(input: BucketPatchInput): BucketPatchInput {
 function normalizeBindingName(value: unknown): string | null {
   const binding = trimToNull(value);
   if (!binding) return null;
-  if (!/^[A-Z][A-Z0-9_]*$/.test(binding)) {
+  if (!BINDING_NAME_REGEX.test(binding)) {
     throw new ApiError(400, "Binding name must look like BUCKET_A");
   }
   return binding;
@@ -164,7 +166,7 @@ function normalizeAccessMode(value: unknown): AccessMode {
 }
 
 function normalizeSortOrder(value: unknown): number {
-  if (value === undefined || value === null || value === "") return 0;
+  if (value === undefined || value === null || value === "") return DEFAULT_BUCKET_SORT_ORDER;
   const number = Number(value);
   if (!Number.isInteger(number)) {
     throw new ApiError(400, "Sort order must be an integer");

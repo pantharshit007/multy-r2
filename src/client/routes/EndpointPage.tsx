@@ -11,6 +11,9 @@ import {
 } from "../api";
 import type { DuplicateStrategy, EndpointRecord, ImageOutputFormat, R2ObjectSummary } from "../../shared";
 import { WorkerBucketPicker } from "../components/WorkerBucketPicker";
+import { formatBytes, describeUploadResult } from "../utils/format";
+import { buildPreviewKey, buildDerivedObjectName } from "../utils/naming";
+import { MAX_UPLOAD_HISTORY_ENTRIES } from "../constants";
 
 export function EndpointPage() {
   const { bucketId } = useParams({ from: "/buckets/$bucketId" });
@@ -247,7 +250,7 @@ function UploadBox({
         setFile(null);
         setInputNonce((current) => current + 1);
         const message = describeUploadResult(result);
-        setHistory((current) => [message, ...current].slice(0, 6));
+        setHistory((current) => [message, ...current].slice(0, MAX_UPLOAD_HISTORY_ENTRIES));
         onStatus(message);
         onDone();
       } catch (cause) {
@@ -342,60 +345,6 @@ function UploadBox({
       ) : null}
     </div>
   );
-}
-
-function describeUploadResult(result: Awaited<ReturnType<typeof uploadEndpointObject>>): string {
-  if (result.skipped) return `Skipped existing file ${result.key}`;
-  const parts = [`Uploaded ${result.key}`];
-  if (result.renamedFrom) parts.push(`renamed from ${result.renamedFrom}`);
-  if (result.image?.processed) {
-    const extra = [result.image.outputFormat, result.image.removeExif ? "EXIF removed" : null].filter(Boolean).join(", ");
-    parts.push(`image processed${extra ? ` (${extra})` : ""}`);
-  }
-  if (result.uploadedSize !== result.originalSize) parts.push(`${formatBytes(result.originalSize)} -> ${formatBytes(result.uploadedSize)}`);
-  return parts.join(" | ");
-}
-
-function buildPreviewKey(folder: string, name: string): string {
-  const cleanName = name.trim().replace(/^\/+/, "");
-  const cleanFolder = folder.trim().replace(/^\/+|\/+$/g, "");
-  if (!cleanName) return cleanFolder;
-  if (!cleanFolder) return cleanName;
-  return `${cleanFolder}/${cleanName}`;
-}
-
-function buildDerivedObjectName(
-  file: File | null,
-  manualName: string,
-  settings: EndpointRecord["uploadSettings"],
-  renameSalt: string,
-): string {
-  const name = manualName.trim() || file?.name || "";
-  if (!name) return "";
-
-  const imageName = file && file.type.startsWith("image/")
-    ? replaceExtension(name, settings.imageUploadSettings.outputFormat)
-    : name;
-
-  if (settings.duplicateStrategy === "rename") {
-    return appendRandomSuffix(imageName, renameSalt);
-  }
-
-  return imageName;
-}
-
-function appendRandomSuffix(name: string, suffix: string): string {
-  if (!suffix) return name;
-  const dot = name.lastIndexOf(".");
-  const base = dot >= 0 ? name.slice(0, dot) : name;
-  const ext = dot >= 0 ? name.slice(dot) : "";
-  return `${base}-${suffix}${ext}`;
-}
-
-function replaceExtension(name: string, format: ImageOutputFormat): string {
-  const dot = name.lastIndexOf(".");
-  const base = dot >= 0 ? name.slice(0, dot) : name;
-  return `${base}.${format}`;
 }
 
 function ObjectRow({
@@ -683,11 +632,4 @@ function SettingsPanel({
 
 function findRecord(id: string): EndpointRecord | null {
   return listEndpointRecords().find((record) => record.id === id) ?? null;
-}
-
-function formatBytes(size: number): string {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-  if (size < 1024 * 1024 * 1024) return `${(size / 1024 / 1024).toFixed(1)} MB`;
-  return `${(size / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }

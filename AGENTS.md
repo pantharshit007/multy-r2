@@ -14,7 +14,7 @@ Multy R2 is a React UI for managing multiple r2-uploader-compatible Worker endpo
 
 ## Local Worker
 
-- `src/server/worker/index.ts` can act as a local endpoint for testing.
+- `src/server/index.ts` can act as a local endpoint for testing.
 - It expects an R2 binding named `R2_BUCKET` or `BUCKET_A`.
 - It expects `AUTH_KEY_SECRET` in `.dev.vars` for local auth.
 - It supports `PATCH /`, `PUT /:key`, `DELETE /:key`, and `GET /:key`.
@@ -31,3 +31,8 @@ Multy R2 is a React UI for managing multiple r2-uploader-compatible Worker endpo
 - Keep dependencies pinned.
 - Use Tailwind CSS v4 for UI styling.
 - Keep docs lean and direct.
+- If something is constant or is changeable like a timeout of iteration number, it should be defined in `constants.ts`.
+- Types should be defined in `types/` folder.
+- If something is reusable logical unit, it should be defined in `lib/` folder.
+- Move all the utility functions to `utils/` folder.
+- Don't clutter a single file with too many functions, move them to there respective folder (ex: utils, services, controllers).

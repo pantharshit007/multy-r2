@@ -2,4 +2,5 @@
 - [ ] signed links?
 - [ ] why is the structure so messed up? client and server folders are within one folder + the routing is not impressive too.
 - [ ] multi select feature
-- [ ] click to copy url
+- [ ] along with click to copy url, give the option of open in new tab (↗️)
+- [ ] the router setup is absolutely horrible, use hono instead and setup the whole thing properly.

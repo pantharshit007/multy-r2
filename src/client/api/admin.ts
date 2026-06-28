@@ -1,6 +1,9 @@
 import type { Bucket, ObjectListResponse, PrivateLinkResponse, R2ObjectSummary } from "../../shared";
-
-const ADMIN_STORAGE_KEY = "multy-r2:admin-api";
+import { joinUrl } from "../../shared/utils/url";
+import { encodeKey } from "../../shared/utils/objectKeys";
+import { API_KEY_HEADER, DEFAULT_PRIVATE_LINK_TTL_SECONDS } from "../../shared/constants";
+import { normalizeApiBase } from "../lib/endpointResolver";
+import { ADMIN_STORAGE_KEY } from "../constants";
 
 export interface AdminApiConfig {
   apiBase: string;
@@ -63,7 +66,7 @@ export async function deleteAdminBucketObject(config: AdminApiConfig, bucketId: 
   });
 }
 
-export async function createAdminPrivateLink(config: AdminApiConfig, bucketId: string, key: string, expires = 3600): Promise<PrivateLinkResponse> {
+export async function createAdminPrivateLink(config: AdminApiConfig, bucketId: string, key: string, expires = DEFAULT_PRIVATE_LINK_TTL_SECONDS): Promise<PrivateLinkResponse> {
   return await adminRequestJson<PrivateLinkResponse>(config, `/api/buckets/${encodeURIComponent(bucketId)}/private-link/${encodeKey(key)}?expires=${expires}`);
 }
 
@@ -85,7 +88,7 @@ async function adminRequest(config: AdminApiConfig, path: string, init?: Request
   const response = await fetch(new URL(path, `${normalizeApiBase(config.apiBase)}/`).toString(), {
     ...init,
     headers: {
-      "x-api-key": config.apiKey,
+      [API_KEY_HEADER]: config.apiKey,
       ...init?.headers,
     },
   });
@@ -96,18 +99,4 @@ async function adminRequest(config: AdminApiConfig, path: string, init?: Request
   }
 
   return response;
-}
-
-function normalizeApiBase(value: string): string {
-  const trimmed = value.trim().replace(/\/+$/, "");
-  if (!trimmed) return window.location.origin;
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-}
-
-function joinUrl(base: string, path: string): string {
-  return new URL(path, `${base.replace(/\/+$/, "")}/`).toString();
-}
-
-function encodeKey(key: string): string {
-  return key.split("/").map(encodeURIComponent).join("/");
 }

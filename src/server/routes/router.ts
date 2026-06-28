@@ -3,12 +3,12 @@ import { handleEndpointApi } from "../controllers/endpointController";
 import type { Env } from "../env";
 import { corsPreflightResponse, jsonErrorResponse, textErrorResponse } from "../http";
 import { authorizeAdminApiRequest } from "../middleware/auth";
-import { API_PREFIX, INTERNAL_ENDPOINT_PREFIX, normalizeEndpointUrl, shouldServeUiAssets as shouldServeUiAssetsForPath } from "./paths";
+import { API_PREFIX, INTERNAL_PROXY_PREFIX, stripProxyPrefix, shouldServeUiAssets as shouldServeUiAssetsForPath } from "./paths";
 
 export async function routeRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  const endpointUrl = normalizeEndpointUrl(url);
-  const isInternalEndpointRequest = url.pathname.startsWith(INTERNAL_ENDPOINT_PREFIX);
+  const endpointUrl = stripProxyPrefix(url);
+  const isInternalProxyRequest = url.pathname.startsWith(INTERNAL_PROXY_PREFIX);
 
   if (endpointUrl.pathname.startsWith(`${API_PREFIX}/`)) {
     if (isOptionsRequest(request)) return corsPreflightResponse();
@@ -21,7 +21,7 @@ export async function routeRequest(request: Request, env: Env): Promise<Response
     }
   }
 
-  if (!isInternalEndpointRequest && isUiAssetRequest(request) && shouldServeUiAssets(request, url)) {
+  if (!isInternalProxyRequest && isUiAssetRequest(request) && shouldServeUiAssets(request, url)) {
     return env.ASSETS.fetch(request);
   }
 
@@ -43,6 +43,6 @@ function isUiAssetRequest(request: Request): boolean {
   return method === "GET" || method === "HEAD";
 }
 
-function shouldServeUiAssets(request: Request, url: URL): boolean {
+function shouldServeUiAssets(_request: Request, url: URL): boolean {
   return shouldServeUiAssetsForPath(url);
 }
