@@ -1,4 +1,6 @@
-import type { Bucket, EndpointBucketBinding } from "../../../shared";
+import type { Bucket, EndpointBucketBinding } from "../../shared";
+import { BINDING_NAME_REGEX } from "../../shared/constants";
+import { DEFAULT_R2_BINDING_NAMES, R2_PROBE_LIMIT } from "../constants";
 import type { Env } from "../env";
 import { ApiError } from "../errors";
 
@@ -16,9 +18,9 @@ export function getBoundBucket(env: Env, bucket: Bucket): R2Bucket {
 }
 
 export function getDefaultEndpointBucket(env: Env): R2Bucket {
-  const bucket = env.R2_BUCKET ?? env.BUCKET_A;
+  const bucket = env[DEFAULT_R2_BINDING_NAMES[0]] ?? env[DEFAULT_R2_BINDING_NAMES[1]];
   if (!isR2Bucket(bucket)) {
-    throw new ApiError(500, "Configure an R2 binding named R2_BUCKET or BUCKET_A for endpoint mode");
+    throw new ApiError(500, `Configure an R2 binding named ${DEFAULT_R2_BINDING_NAMES[0]} or ${DEFAULT_R2_BINDING_NAMES[1]} for endpoint mode`);
   }
 
   return bucket;
@@ -42,7 +44,7 @@ export async function listEndpointBucketBindings(env: Env): Promise<EndpointBuck
       if (!isR2Bucket(value)) return null;
 
       try {
-        await value.list({ limit: 1 });
+        await value.list({ limit: R2_PROBE_LIMIT });
         return {
           id: bindingName,
           name: bindingName,
@@ -80,14 +82,14 @@ function normalizeBucketBindingName(value: string | null): string | null {
   if (!value) return null;
   const trimmed = value.trim();
   if (!trimmed) return null;
-  if (!/^[A-Z][A-Z0-9_]*$/.test(trimmed)) {
+  if (!BINDING_NAME_REGEX.test(trimmed)) {
     throw new ApiError(400, "bucketId must look like BUCKET_A or BUCKET_B");
   }
   return trimmed;
 }
 
 function bucketBindingSortRank(bindingName: string): number {
-  if (bindingName === "R2_BUCKET") return 0;
-  if (bindingName === "BUCKET_A") return 1;
+  if (bindingName === DEFAULT_R2_BINDING_NAMES[0]) return 0;
+  if (bindingName === DEFAULT_R2_BINDING_NAMES[1]) return 1;
   return 2;
 }

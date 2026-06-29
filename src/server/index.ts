@@ -1,5 +1,5 @@
 import type { Env } from "./env";
-import { routeRequest } from "./routes/router";
+import { routeRequest } from "./routes";
 
 export default {
   fetch(request: Request, env: Env): Promise<Response> {

@@ -1,4 +1,6 @@
-export function guessContentTypeFromKey(key: string): string {
+import { DEFAULT_MIME_TYPE } from "../constants";
+
+export function guessContentType(key: string): string {
   const extension = key.split(".").pop()?.toLowerCase() ?? "";
 
   switch (extension) {
@@ -30,6 +32,6 @@ export function guessContentTypeFromKey(key: string): string {
     case "webp":
       return "image/webp";
     default:
-      return "application/octet-stream";
+      return DEFAULT_MIME_TYPE;
   }
 }

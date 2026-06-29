@@ -1,17 +1,18 @@
-export const API_PREFIX = "/api";
-export const INTERNAL_ENDPOINT_PREFIX = "/_multy/endpoint";
+import { API_PREFIX, INTERNAL_PROXY_PREFIX } from "../constants";
+
+export { API_PREFIX, INTERNAL_PROXY_PREFIX };
 
 export function splitApiPath(pathname: string): string[] {
   return pathname.replace(/^\/api\/?/, "").split("/").filter(Boolean);
 }
 
-export function normalizeEndpointUrl(url: URL): URL {
-  if (!url.pathname.startsWith(INTERNAL_ENDPOINT_PREFIX)) {
+export function stripProxyPrefix(url: URL): URL {
+  if (!url.pathname.startsWith(INTERNAL_PROXY_PREFIX)) {
     return url;
   }
 
   const next = new URL(url.toString());
-  next.pathname = `/${url.pathname.slice(INTERNAL_ENDPOINT_PREFIX.length).replace(/^\/+/, "")}`;
+  next.pathname = `/${url.pathname.slice(INTERNAL_PROXY_PREFIX.length).replace(/^\/+/, "")}`;
   return next;
 }
 

@@ -9,10 +9,21 @@ import type {
   R2ObjectSummary,
   UploadSettings,
 } from "../../shared";
-import { DEFAULT_UPLOAD_SETTINGS, joinUrl } from "../../shared";
-
-const ENDPOINTS_STORAGE_KEY = "multy-r2:endpoints";
-const INTERNAL_ENDPOINT_PROXY_PREFIX = "/_multy/endpoint";
+import { DEFAULT_UPLOAD_SETTINGS } from "../../shared";
+import { joinUrl } from "../../shared/utils/url";
+import { encodeKey, sanitizeKey, sanitizeFolder } from "../../shared/utils/objectKeys";
+import { guessContentType } from "../../shared/utils/contentType";
+import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE } from "../../shared/constants";
+import { ENDPOINTS_STORAGE_KEY } from "../constants";
+import {
+  normalizeEndpoint,
+  normalizeOptionalEndpoint,
+  normalizeOptionalText,
+  resolveEndpointUrl,
+  isSameOriginEndpoint,
+} from "../lib/endpointResolver";
+import { fitImage, canvasToBlob, isImageFile, toMimeType } from "../lib/imageProcessing";
+import { replaceExtension } from "../utils/naming";
 
 export function listEndpointRecords(): EndpointRecord[] {
   const raw = localStorage.getItem(ENDPOINTS_STORAGE_KEY);
@@ -109,9 +120,9 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
     throw new Error("Endpoint and API key are required before loading buckets");
   }
 
-  const target = new URL("/endpoint/buckets", `${endPoint}/`);
+  const target = new URL("/r2/bindings", `${endPoint}/`);
   const response = await fetch(resolveEndpointUrl(target).toString(), {
-    headers: { "x-api-key": apiKey },
+    headers: { [API_KEY_HEADER]: apiKey },
   });
 
   if (!response.ok) {
@@ -121,14 +132,14 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
-    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /endpoint/buckets.");
+    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /r2/bindings.");
   }
 
   let body: unknown;
   try {
     body = (await response.json()) as unknown;
   } catch {
-    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /endpoint/buckets.");
+    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /r2/bindings.");
   }
 
   return Array.isArray(body) ? body.map(normalizeEndpointBucketBinding).filter((bucket) => bucket !== null) : [];
@@ -194,7 +205,7 @@ export async function createEndpointFolder(record: EndpointRecord, folder: strin
   await endpointRequest(record, `/${encodeKey(key)}`, {
     method: "PUT",
     headers: {
-      "content-type": "application/x-directory",
+      "content-type": FOLDER_CONTENT_TYPE,
     },
     body: new Blob([]),
   });
@@ -209,10 +220,12 @@ export async function deleteEndpointObject(record: EndpointRecord, key: string):
 }
 
 export function publicUrlFor(record: EndpointRecord, key: string): string {
-  const url = new URL(joinUrl(record.customDomain || record.endPoint, key));
+  const base = record.customDomain || record.endPoint;
   if (record.workerBucketMode && record.bucketBindingName) {
-    url.searchParams.set("bucketBindingName", record.bucketBindingName);
+    const url = new URL(joinUrl(base, `bucket/${encodeURIComponent(record.bucketBindingName)}/${key}`));
+    return resolveEndpointUrl(url).toString();
   }
+  const url = new URL(joinUrl(base, key));
   return resolveEndpointUrl(url).toString();
 }
 
@@ -236,14 +249,14 @@ async function endpointRequest(record: EndpointRecord, path: string, init?: Requ
 }
 
 async function endpointFetch(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
-  const target = new URL(path, `${record.endPoint}/`);
-  if (record.workerBucketMode && record.bucketBindingName) {
-    target.searchParams.set("bucketBindingName", record.bucketBindingName);
-  }
+  const prefix = record.workerBucketMode && record.bucketBindingName
+    ? `/bucket/${encodeURIComponent(record.bucketBindingName)}`
+    : "";
+  const target = new URL(`${prefix}${path}`, `${record.endPoint}/`);
   return await fetch(resolveEndpointUrl(target).toString(), {
     ...init,
     headers: {
-      "x-api-key": record.apiKey,
+      [API_KEY_HEADER]: record.apiKey,
       ...init?.headers,
     },
   });
@@ -285,40 +298,6 @@ async function prepareUploadFile(file: File, settings: ImageUploadSettings): Pro
   } finally {
     bitmap.close();
   }
-}
-
-function fitImage(width: number, height: number, maxWidth: number | null, maxHeight: number | null): { width: number; height: number } {
-  const widthRatio = maxWidth ? maxWidth / width : 1;
-  const heightRatio = maxHeight ? maxHeight / height : 1;
-  const ratio = Math.min(1, widthRatio, heightRatio);
-  return { width: Math.max(1, Math.round(width * ratio)), height: Math.max(1, Math.round(height * ratio)) };
-}
-
-function toMimeType(format: ImageOutputFormat): string {
-  switch (format) {
-    case "jpeg":
-      return "image/jpeg";
-    case "png":
-      return "image/png";
-    case "webp":
-      return "image/webp";
-  }
-}
-
-function replaceExtension(name: string, format: ImageOutputFormat): string {
-  const parts = name.split("/");
-  const last = parts.pop() ?? name;
-  const base = last.includes(".") ? last.slice(0, last.lastIndexOf(".")) : last;
-  parts.push(`${base}.${format}`);
-  return parts.join("/");
-}
-
-function isImageFile(file: File): boolean {
-  return file.type.startsWith("image/");
-}
-
-async function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
-  return await new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), type, quality));
 }
 
 function normalizeUploadSettings(value: unknown): UploadSettings {
@@ -365,19 +344,6 @@ function clampQuality(value: unknown): number {
   return Math.min(1, Math.max(0, parsed));
 }
 
-function resolveEndpointUrl(target: URL): URL {
-  if (isSameOriginEndpoint(target)) {
-    return new URL(`${INTERNAL_ENDPOINT_PROXY_PREFIX}${target.pathname}${target.search}`, target.origin);
-  }
-
-  return target;
-}
-
-function isSameOriginEndpoint(url: URL): boolean {
-  const currentOrigin = globalThis.location?.origin;
-  return Boolean(currentOrigin && url.origin === currentOrigin);
-}
-
 function toObjectSummary(
   record: EndpointRecord,
   object: { key: string; size: number; uploaded?: string | Date; etag?: string },
@@ -391,17 +357,11 @@ function toObjectSummary(
   };
 }
 
-function normalizeEndpoint(value: string): string {
-  const trimmed = value.trim().replace(/\/+$/, "");
-  if (!trimmed) return "";
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-}
-
 function normalizeEndpointBucketBinding(value: unknown): EndpointBucketBinding | null {
   if (!value || typeof value !== "object") return null;
   const bucket = value as Partial<EndpointBucketBinding>;
   const bindingName = normalizeOptionalText(bucket.bindingName);
-  if (!/^[A-Z][A-Z0-9_]*$/.test(bindingName)) return null;
+  if (!BINDING_NAME_REGEX.test(bindingName)) return null;
 
   return {
     id: normalizeOptionalText(bucket.id) || bindingName,
@@ -412,66 +372,5 @@ function normalizeEndpointBucketBinding(value: unknown): EndpointBucketBinding |
 
 function normalizeBucketBindingName(value: string | null | undefined): string {
   const trimmed = normalizeOptionalText(value);
-  return /^[A-Z][A-Z0-9_]*$/.test(trimmed) ? trimmed : "";
-}
-
-function normalizeOptionalEndpoint(value: string | null | undefined): string {
-  const trimmed = (value ?? "").trim();
-  return trimmed ? normalizeEndpoint(trimmed) : "";
-}
-
-function normalizeOptionalText(value: string | null | undefined): string {
-  return (value ?? "").trim();
-}
-
-function sanitizeKey(value: string): string {
-  const key = value.trim().replace(/^\/+/, "");
-  if (!key || key.includes("..")) throw new Error("Object key is invalid");
-  return key;
-}
-
-function sanitizeFolder(value: string): string {
-  const folder = value.trim().replace(/^\/+|\/+$/g, "");
-  if (!folder || folder.includes("..")) throw new Error("Folder name is invalid");
-  return folder;
-}
-
-function encodeKey(key: string): string {
-  return key.split("/").map(encodeURIComponent).join("/");
-}
-
-function guessContentType(key: string): string {
-  const extension = key.split(".").pop()?.toLowerCase() ?? "";
-
-  switch (extension) {
-    case "avif":
-      return "image/avif";
-    case "bmp":
-      return "image/bmp";
-    case "css":
-      return "text/css; charset=utf-8";
-    case "gif":
-      return "image/gif";
-    case "htm":
-    case "html":
-      return "text/html; charset=utf-8";
-    case "jpeg":
-    case "jpg":
-      return "image/jpeg";
-    case "js":
-    case "mjs":
-      return "text/javascript; charset=utf-8";
-    case "json":
-      return "application/json; charset=utf-8";
-    case "png":
-      return "image/png";
-    case "svg":
-      return "image/svg+xml";
-    case "txt":
-      return "text/plain; charset=utf-8";
-    case "webp":
-      return "image/webp";
-    default:
-      return "application/octet-stream";
-  }
+  return BINDING_NAME_REGEX.test(trimmed) ? trimmed : "";
 }

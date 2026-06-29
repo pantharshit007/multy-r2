@@ -4,8 +4,17 @@ import type {
   MessageResponse,
   ObjectListResponse,
   PrivateLinkResponse,
-} from "../../../shared";
-import { joinUrl } from "../../../shared";
+} from "../../shared";
+import { joinUrl } from "../../shared";
+import { DEFAULT_PRIVATE_LINK_TTL_SECONDS } from "../../shared/constants";
+import {
+  DEFAULT_OBJECT_LIST_LIMIT,
+  MAX_OBJECT_LIST_LIMIT,
+  MAX_PRIVATE_LINK_TTL_SECONDS,
+  MIN_OBJECT_LIST_LIMIT,
+  MIN_PRIVATE_LINK_TTL_SECONDS,
+  SIGNED_OBJECT_CACHE_CONTROL,
+} from "../constants";
 import type { Env } from "../env";
 import { ApiError } from "../errors";
 import { json, readJson } from "../http";
@@ -80,7 +89,7 @@ function isBucketCollectionRoute(parts: string[]): boolean {
 async function listObjects(env: Env, bucketId: string, url: URL): Promise<Response> {
   const bucket = await getBucket(env, bucketId);
   const r2 = getBoundBucket(env, bucket);
-  const limit = clampNumber(Number(url.searchParams.get("limit") ?? 100), 1, 1000);
+  const limit = clampNumber(Number(url.searchParams.get("limit") ?? DEFAULT_OBJECT_LIST_LIMIT), MIN_OBJECT_LIST_LIMIT, MAX_OBJECT_LIST_LIMIT);
   const listed = await r2.list({
     prefix: url.searchParams.get("prefix") ?? undefined,
     cursor: url.searchParams.get("cursor") ?? undefined,
@@ -134,7 +143,7 @@ async function createPrivateLink(env: Env, bucketId: string, keyParts: string[],
   const bucket = await getBucket(env, bucketId);
   getBoundBucket(env, bucket);
   const key = decodeKey(keyParts);
-  const ttlSeconds = clampNumber(Number(url.searchParams.get("expires") ?? 3600), 60, 60 * 60 * 24 * 7);
+  const ttlSeconds = clampNumber(Number(url.searchParams.get("expires") ?? DEFAULT_PRIVATE_LINK_TTL_SECONDS), MIN_PRIVATE_LINK_TTL_SECONDS, MAX_PRIVATE_LINK_TTL_SECONDS);
   const expires = Math.floor(Date.now() / 1000) + ttlSeconds;
   const privateUrl = await createPrivateObjectLink(env, bucket.id, key, expires, url.origin);
 
@@ -168,6 +177,6 @@ async function getSignedObject(env: Env, bucketId: string, keyParts: string[], u
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("etag", object.httpEtag);
-  headers.set("cache-control", "private, max-age=0");
+  headers.set("cache-control", SIGNED_OBJECT_CACHE_CONTROL);
   return new Response(object.body, { headers });
 }

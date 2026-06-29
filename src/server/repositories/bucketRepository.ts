@@ -1,4 +1,6 @@
-import type { AccessMode, Bucket, BucketInput, BucketPatchInput } from "../../../shared";
+import type { AccessMode, Bucket, BucketInput, BucketPatchInput } from "../../shared";
+import { BINDING_NAME_REGEX } from "../../shared/constants";
+import { ACCESS_MODES, DEFAULT_BUCKET_ACCESS_MODE, DEFAULT_BUCKET_SORT_ORDER } from "../constants";
 import type { Env } from "../env";
 import { ApiError } from "../errors";
 import { trimToNull } from "../utils/request";
@@ -15,7 +17,7 @@ interface DbBucket {
   updated_at: string;
 }
 
-const ACCESS_MODES = new Set<AccessMode>(["public", "private", "signed-link"]);
+const ACCESS_MODE_SET = new Set<AccessMode>(ACCESS_MODES);
 
 export async function listBuckets(env: Env): Promise<Bucket[]> {
   const result = await env.DB.prepare(
@@ -122,7 +124,7 @@ function parseBucketInput(input: BucketInput): Required<BucketInput> {
     bindingName: normalizeBindingName(input.bindingName),
     endpoint: normalizeUrl(input.endpoint),
     customDomain: normalizeUrl(input.customDomain),
-    accessMode: normalizeAccessMode(input.accessMode ?? "public"),
+    accessMode: normalizeAccessMode(input.accessMode ?? DEFAULT_BUCKET_ACCESS_MODE),
     sortOrder: normalizeSortOrder(input.sortOrder),
   };
 }
@@ -150,21 +152,21 @@ function parseBucketPatchInput(input: BucketPatchInput): BucketPatchInput {
 function normalizeBindingName(value: unknown): string | null {
   const binding = trimToNull(value);
   if (!binding) return null;
-  if (!/^[A-Z][A-Z0-9_]*$/.test(binding)) {
+  if (!BINDING_NAME_REGEX.test(binding)) {
     throw new ApiError(400, "Binding name must look like BUCKET_A");
   }
   return binding;
 }
 
 function normalizeAccessMode(value: unknown): AccessMode {
-  if (typeof value !== "string" || !ACCESS_MODES.has(value as AccessMode)) {
+  if (typeof value !== "string" || !ACCESS_MODE_SET.has(value as AccessMode)) {
     throw new ApiError(400, "Access mode must be public, private, or signed-link");
   }
   return value as AccessMode;
 }
 
 function normalizeSortOrder(value: unknown): number {
-  if (value === undefined || value === null || value === "") return 0;
+  if (value === undefined || value === null || value === "") return DEFAULT_BUCKET_SORT_ORDER;
   const number = Number(value);
   if (!Number.isInteger(number)) {
     throw new ApiError(400, "Sort order must be an integer");

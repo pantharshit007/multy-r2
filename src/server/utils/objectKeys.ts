@@ -1,5 +1,7 @@
 import { ApiError } from "../errors";
 
+export { encodeKey } from "../../shared/utils/objectKeys";
+
 export function sanitizeObjectKey(value: string): string {
   const key = value.replace(/^\/+/, "").trim();
   if (!key || key === "." || key.includes("..")) {
@@ -10,8 +12,4 @@ export function sanitizeObjectKey(value: string): string {
 
 export function decodeKey(parts: string[]): string {
   return sanitizeObjectKey(parts.map((part) => decodeURIComponent(part)).join("/"));
-}
-
-export function encodeKey(key: string): string {
-  return key.split("/").map(encodeURIComponent).join("/");
 }

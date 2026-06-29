@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { listEndpointBucketBindings } from "../api";
 import type { EndpointBucketBinding } from "../../shared";
+import { normalizeApiBase } from "../lib/endpointResolver";
+import { BUCKET_PICKER_DEBOUNCE_MS } from "../constants";
 
 export function WorkerBucketPicker({
   enabled,
@@ -74,7 +76,7 @@ export function WorkerBucketPicker({
       } finally {
         if (!cancelled) setLoading(false);
       }
-    }, 250);
+    }, BUCKET_PICKER_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
@@ -131,16 +133,4 @@ export function WorkerBucketPicker({
       ) : null}
     </div>
   );
-}
-
-function normalizeApiBase(value: string): string {
-  const trimmed = value.trim().replace(/\/+$/, "");
-  if (!trimmed) return "";
-
-  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-  try {
-    return new URL(withProtocol).toString().replace(/\/+$/, "");
-  } catch {
-    return "";
-  }
 }
