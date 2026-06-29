@@ -3,7 +3,10 @@ import { EMPTY_API_BASE, FALLBACK_API_BASE, INTERNAL_PROXY_PREFIX } from "../con
 export function normalizeApiBase(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "");
   if (!trimmed) return EMPTY_API_BASE;
-  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+  const protocol = globalThis.location?.protocol === "http:" ? "http:" : "https:";
+  return `${protocol}//${trimmed}`;
 }
 
 export function resolveApiBase(value: string): string {
