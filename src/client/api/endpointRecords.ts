@@ -17,7 +17,6 @@ import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE, PUBLIC_ALIAS_P
 import { ENDPOINTS_STORAGE_KEY } from "../constants";
 import {
   normalizeEndpoint,
-  normalizeOptionalEndpoint,
   normalizeOptionalText,
 } from "../lib/endpointResolver";
 import { fitImage, canvasToBlob, isImageFile, toMimeType } from "../lib/imageProcessing";
@@ -35,11 +34,12 @@ export function listEndpointRecords(): EndpointRecord[] {
         id: record.id ?? crypto.randomUUID(),
         endPoint: normalizeEndpoint(record.endPoint ?? record.endpoint ?? ""),
         apiKey: record.apiKey ?? "",
-        customDomain: normalizeOptionalEndpoint(record.customDomain ?? ""),
+        customDomain: normalizeDomainInput(record.customDomain),
         workerBucketMode: record.workerBucketMode ?? false,
         bucketId: record.bucketId ?? "",
         bucketName: record.bucketName ?? "",
         bucketBindingName: record.bucketBindingName ?? "",
+        bucketDomains: normalizeBucketDomains(record.bucketDomains),
         uploadSettings: normalizeUploadSettings(record.uploadSettings),
       }))
       .filter((record) => record.endPoint && record.apiKey);
@@ -57,6 +57,7 @@ export function saveEndpointRecord(input: {
   bucketId?: string;
   bucketName?: string;
   bucketBindingName?: string;
+  bucketDomains?: Record<string, string>;
   uploadSettings?: Partial<UploadSettings>;
 }): EndpointRecord[] {
   const records = listEndpointRecords();
@@ -65,15 +66,17 @@ export function saveEndpointRecord(input: {
   const bucketId = workerBucketMode ? normalizeOptionalText(input.bucketId ?? existing?.bucketId ?? "") : "";
   const bucketName = workerBucketMode ? normalizeOptionalText(input.bucketName ?? existing?.bucketName ?? "") : "";
   const bucketBindingName = workerBucketMode ? normalizeBucketBindingName(input.bucketBindingName ?? existing?.bucketBindingName ?? "") : "";
+  const bucketDomains = workerBucketMode ? normalizeBucketDomains(input.bucketDomains ?? existing?.bucketDomains ?? {}) : {};
   const next: EndpointRecord = {
     id: input.id ?? crypto.randomUUID(),
     endPoint: normalizeEndpoint(input.endPoint),
     apiKey: input.apiKey.trim(),
-    customDomain: normalizeOptionalEndpoint(input.customDomain),
+    customDomain: normalizeDomainInput(input.customDomain),
     workerBucketMode,
     bucketId,
     bucketName,
     bucketBindingName,
+    bucketDomains,
     uploadSettings: input.uploadSettings ? normalizeUploadSettings(input.uploadSettings) : existing?.uploadSettings ?? cloneUploadSettings(DEFAULT_UPLOAD_SETTINGS),
   };
 
@@ -218,14 +221,49 @@ export async function deleteEndpointObject(record: EndpointRecord, key: string):
 }
 
 export function publicUrlFor(record: EndpointRecord, key: string): string {
-  const base = record.customDomain || record.endPoint;
-  // Worker-bucket mode shares via the short read-only alias
-  // (`/cdn/BUCKET_A/<key>`); the default bucket has no binding segment, so it
-  // stays on the r2 API path.
+  // A custom domain is bound directly to the R2 bucket and serves objects at
+  // the raw key (e.g. `https://r2.example.com/<key>`). This is the production,
+  // edge-cached path, so when present use it verbatim with no Worker prefix.
+  // In worker-bucket mode the domain is resolved per active binding.
+  const customDomain = activeCustomDomain(record);
+  if (customDomain) {
+    return buildPublicUrl(customDomain, key);
+  }
+
+  // Otherwise share through the Worker endpoint (generic `*.workers.dev` or a
+  // domain bound to the Worker, which is not edge-cached):
+  //  - worker-bucket mode -> public read-only alias `/cdn/<binding>/<key>`
+  //  - default bucket      -> public GET on the r2 API path `/api/r2/<key>`
   const path = record.workerBucketMode && record.bucketBindingName
     ? `${PUBLIC_ALIAS_PREFIX.replace(/^\/+/, "")}/${record.bucketBindingName}/${key}`
     : `${R2_API_PREFIX.replace(/^\/+/, "")}/${key}`;
-  return new URL(joinUrl(base, path)).toString();
+  return buildPublicUrl(record.endPoint, path);
+}
+
+/**
+ * Joins a base origin and path into an absolute URL. The base is whatever the
+ * user typed (a custom domain may omit the scheme), so fall back to the joined
+ * string instead of throwing when it cannot be parsed as an absolute URL.
+ */
+function buildPublicUrl(base: string, path: string): string {
+  const joined = joinUrl(base, path);
+  try {
+    return new URL(joined).toString();
+  } catch {
+    return joined;
+  }
+}
+
+/**
+ * The custom domain in effect for the record's active bucket. In worker-bucket
+ * mode each binding can have its own R2 domain (`bucketDomains`); otherwise the
+ * single `customDomain` applies.
+ */
+function activeCustomDomain(record: EndpointRecord): string {
+  if (record.workerBucketMode && record.bucketBindingName) {
+    return record.bucketDomains?.[record.bucketBindingName] ?? "";
+  }
+  return record.customDomain;
 }
 
 export function createPrivateLink(): Promise<PrivateLinkResponse> {
@@ -372,4 +410,22 @@ function normalizeEndpointBucketBinding(value: unknown): EndpointBucketBinding |
 function normalizeBucketBindingName(value: string | null | undefined): string {
   const trimmed = normalizeOptionalText(value);
   return BINDING_NAME_REGEX.test(trimmed) ? trimmed : "";
+}
+
+function normalizeDomainInput(value: string | null | undefined): string {
+  // Store exactly what the user typed (sans surrounding whitespace). We do not
+  // inject a scheme; the UI asks for a full `https://` URL. `joinUrl` strips any
+  // trailing slash at build time, and `publicUrlFor` tolerates a missing scheme.
+  return (value ?? "").trim();
+}
+
+function normalizeBucketDomains(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object") return {};
+  const result: Record<string, string> = {};
+  for (const [binding, domain] of Object.entries(value as Record<string, unknown>)) {
+    if (!BINDING_NAME_REGEX.test(binding)) continue;
+    const normalized = normalizeDomainInput(typeof domain === "string" ? domain : "");
+    if (normalized) result[binding] = normalized;
+  }
+  return result;
 }

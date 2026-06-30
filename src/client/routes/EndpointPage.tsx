@@ -360,13 +360,14 @@ function ObjectRow({
   onError: (message: string | null) => void;
   onStatus: (message: string | null) => void;
 }) {
+  const publicUrl = object.publicUrl || publicUrlFor(record, object.key);
+
   async function copyPublicUrl() {
-    const url = object.publicUrl || publicUrlFor(record, object.key);
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(publicUrl);
       onStatus("Public URL copied");
     } catch {
-      onError(url);
+      onError(publicUrl);
     }
   }
 
@@ -379,6 +380,16 @@ function ObjectRow({
         <button className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-200 hover:border-amber-300" onClick={copyPublicUrl} type="button">
           Copy URL
         </button>
+        <a
+          className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-200 hover:border-amber-300"
+          href={publicUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Open in new tab"
+          aria-label="Open in new tab"
+        >
+          Open ↗
+        </a>
         <button className="rounded-lg border border-red-900/70 px-2.5 py-1.5 text-xs text-red-300 hover:bg-red-950/40" onClick={onDelete} type="button">
           Delete
         </button>
@@ -441,10 +452,13 @@ function SettingsPanel({
           API Key
           <input className="h-11 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none ring-0 focus:border-amber-300" value={form.apiKey} onChange={(event) => updateForm({ ...form, apiKey: event.target.value })} type="password" required />
         </label>
-        <label className="grid gap-2 text-sm font-medium text-zinc-300">
-          Custom Domain
-          <input className="h-11 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none ring-0 focus:border-amber-300" value={form.customDomain} onChange={(event) => updateForm({ ...form, customDomain: event.target.value })} />
-        </label>
+        {form.workerBucketMode ? null : (
+          <label className="grid gap-2 text-sm font-medium text-zinc-300">
+            Custom Domain
+            <input className="h-11 w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none ring-0 focus:border-amber-300" value={form.customDomain} onChange={(event) => updateForm({ ...form, customDomain: event.target.value })} placeholder="https://r2.example.com" />
+            <span className="text-xs leading-5 text-zinc-500">Enter the full URL including <code className="rounded bg-zinc-800 px-1 py-0.5 text-zinc-300">https://</code>. Leave blank to share through the Worker URL.</span>
+          </label>
+        )}
         <WorkerBucketPicker
           enabled={form.workerBucketMode}
           endpoint={form.endPoint}
@@ -452,12 +466,14 @@ function SettingsPanel({
           bucketId={form.bucketId}
           bucketName={form.bucketName}
           bucketBindingName={form.bucketBindingName}
+          bucketDomains={form.bucketDomains}
           onEnabledChange={(enabled) => updateForm({
             ...form,
             workerBucketMode: enabled,
             bucketId: enabled ? form.bucketId : "",
             bucketName: enabled ? form.bucketName : "",
             bucketBindingName: enabled ? form.bucketBindingName : "",
+            bucketDomains: enabled ? form.bucketDomains : {},
           })}
           onBucketChange={(bucket) => updateForm({
             ...form,
@@ -466,6 +482,7 @@ function SettingsPanel({
             bucketName: bucket?.name ?? "",
             bucketBindingName: bucket?.bindingName ?? "",
           })}
+          onBucketDomainsChange={(next) => updateForm({ ...form, bucketDomains: next })}
         />
         <label className="grid gap-2 text-sm font-medium text-zinc-300">
           Duplicate Handling

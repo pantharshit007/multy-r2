@@ -12,6 +12,7 @@ type EndpointForm = {
   bucketId: string;
   bucketName: string;
   bucketBindingName: string;
+  bucketDomains: Record<string, string>;
 };
 
 const EMPTY_FORM: EndpointForm = {
@@ -22,6 +23,7 @@ const EMPTY_FORM: EndpointForm = {
   bucketId: "",
   bucketName: "",
   bucketBindingName: "",
+  bucketDomains: {},
 };
 
 export function DashboardPage() {
@@ -117,15 +119,24 @@ export function DashboardPage() {
               required
             />
           </label>
-          <label className="grid gap-2 text-sm font-medium text-zinc-300">
-            Custom Domain (Optional)
-            <input
-              className="h-11 rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300"
-              value={form.customDomain}
-              onChange={(event) => setForm({ ...form, customDomain: event.target.value })}
-              placeholder="https://r2.example.com"
-            />
-          </label>
+          {form.workerBucketMode ? null : (
+            <>
+              <label className="grid gap-2 text-sm font-medium text-zinc-300">
+                Custom Domain (Optional)
+                <input
+                  className="h-11 rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300"
+                  value={form.customDomain}
+                  onChange={(event) => setForm({ ...form, customDomain: event.target.value })}
+                  placeholder="https://r2.example.com"
+                />
+              </label>
+              <p className="-mt-2 text-xs leading-5 text-zinc-500">
+                Recommended for production: connect a domain to the R2 bucket so shared files are served straight from R2 and cached at
+                the edge. Enter the full URL including <code className="rounded bg-zinc-800 px-1 py-0.5 text-zinc-300">https://</code>. Leave
+                blank to share through the Worker URL, which works but is not edge-cached.
+              </p>
+            </>
+          )}
           <WorkerBucketPicker
             enabled={form.workerBucketMode}
             endpoint={form.endPoint}
@@ -133,6 +144,7 @@ export function DashboardPage() {
             bucketId={form.bucketId}
             bucketName={form.bucketName}
             bucketBindingName={form.bucketBindingName}
+            bucketDomains={form.bucketDomains}
             onEnabledChange={(enabled) =>
               setForm({
                 ...form,
@@ -140,6 +152,7 @@ export function DashboardPage() {
                 bucketId: enabled ? form.bucketId : "",
                 bucketName: enabled ? form.bucketName : "",
                 bucketBindingName: enabled ? form.bucketBindingName : "",
+                bucketDomains: enabled ? form.bucketDomains : {},
               })
             }
             onBucketChange={(bucket) =>
@@ -151,6 +164,7 @@ export function DashboardPage() {
                 bucketBindingName: bucket?.bindingName ?? "",
               }))
             }
+            onBucketDomainsChange={(next) => setForm((current) => ({ ...current, bucketDomains: next }))}
           />
           <p className="text-sm leading-6 text-zinc-500">
             Check this when the Worker owns multiple buckets. Then pick the bucket from the dropdown and the app will use that binding for this endpoint.
