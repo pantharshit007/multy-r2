@@ -50,15 +50,24 @@ endpointRoutes.onError((error, c) => {
 
 endpointRoutes.use("*", corsMiddleware);
 
+//todo: check the below comments.
 // Worker-wide binding discovery (not scoped to a single bucket).
+// Route-shadowing tradeoff: this static path wins over the default-scope
+// `/:key{.+}` below, so an object literally keyed `bindings` is unreachable at
+// `/api/r2/bindings`. It is still reachable via the per-binding scope
+// (`/api/r2/bucket/:bindingName/bindings`) or the public `/cdn` alias.
 endpointRoutes.get("/bindings", endpointAuth, listBindingsHandler);
 
 // Per-binding scope: `/bucket/:bindingName/...` selects an explicit R2 binding.
+// Route-shadowing tradeoff: on the default scope a key whose first segment is
+// `bucket` (e.g. `bucket/foo`) is parsed as this scope instead of an object
+// key. Such keys stay reachable via the explicit per-binding scope or `/cdn`.
 const bucketScopedRoutes = new Hono<AppEnv>({ strict: false });
 defineBucketRoutes(bucketScopedRoutes);
 endpointRoutes.route(BUCKET_SCOPE_BASE, bucketScopedRoutes);
 
-// Default scope: the Worker's default bucket.
+// Default scope: the Worker's default bucket. Registered last so the static
+// `/bindings` and `/bucket/...` paths above take precedence (see notes there).
 defineBucketRoutes(endpointRoutes);
 
 endpointRoutes.all("*", () => {

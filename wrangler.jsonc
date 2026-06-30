@@ -24,10 +24,6 @@
   {
     "binding": "BUCKET_B",
     "bucket_name": "mine"
-  }, 
-  {
-    "binding": "my-super-bucket",
-    "bucket_name": "great-bucket"
   }
   ],
   "secrets": {

@@ -2,7 +2,7 @@
 
 ## Project
 
-Multy R2 is a React UI for managing multiple r2-uploader-compatible Worker endpoints.
+Multy R2 is a React UI for managing multiple Worker endpoints.
 
 ## Current Model
 
@@ -22,6 +22,20 @@ Multy R2 is a React UI for managing multiple r2-uploader-compatible Worker endpo
 - A binding can be selected with the `/api/r2/bucket/:bindingName/...` path scope.
 - `GET|HEAD /cdn/:bindingName/:key` is a public, read-only short alias for sharing
   objects (e.g. `/cdn/BUCKET_A/tmp/pfp.webp`). Writes/listing stay on `/api/r2`.
+- Hono URL-decodes path params automatically; do not call `decodeURIComponent`
+  on `:key`/`:bindingName` params (it would double-decode).
+
+## Bucket Names
+
+- Binding names are the stable identifiers used in URLs. They may be any case and
+  may include hyphens (e.g. `BUCKET_A`, `my-super-bucket`) and are resolved via
+  `env[bindingName]`.
+- The R2 binding object on `env` does NOT expose its underlying `bucket_name`, so
+  friendly labels shown in the UI come from a build-time generated map.
+- `scripts/generateBucketNames.mjs` reads `r2_buckets` from `wrangler.jsonc` and
+  writes `src/server/generated/bucketNames.ts` (`BUCKET_NAMES`). Run via
+  `pnpm gen:bindings`; `build` and `wr:dev` run it automatically so the map never
+  drifts from `wrangler.jsonc`.
 
 ## Local Worker
 

@@ -3,5 +3,4 @@
 export const BUCKET_NAMES: Record<string, string> = {
   "BUCKET_A": "shottr-bucket",
   "BUCKET_B": "mine",
-  "my-super-bucket": "great-bucket",
 };

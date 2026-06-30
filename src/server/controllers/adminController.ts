@@ -33,7 +33,7 @@ import { clampNumber, isFile, trimToNull } from "../utils/request";
 
 const nowInSeconds = (): number => Math.floor(Date.now() / 1000);
 
-const bucketIdParam = (c: AppContext): string => decodeURIComponent(c.req.param("bucketId") ?? "");
+const bucketIdParam = (c: AppContext): string => c.req.param("bucketId") ?? "";
 const objectKeyParam = (c: AppContext): string => sanitizeObjectKey(c.req.param("key") ?? "");
 
 export async function listBucketsHandler(c: AppContext): Promise<Response> {
