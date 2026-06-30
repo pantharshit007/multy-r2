@@ -13,14 +13,12 @@ import { DEFAULT_UPLOAD_SETTINGS } from "../../shared";
 import { joinUrl } from "../../shared/utils/url";
 import { encodeKey, sanitizeKey, sanitizeFolder } from "../../shared/utils/objectKeys";
 import { guessContentType } from "../../shared/utils/contentType";
-import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE } from "../../shared/constants";
+import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE, R2_API_PREFIX } from "../../shared/constants";
 import { ENDPOINTS_STORAGE_KEY } from "../constants";
 import {
   normalizeEndpoint,
   normalizeOptionalEndpoint,
   normalizeOptionalText,
-  resolveEndpointUrl,
-  isSameOriginEndpoint,
 } from "../lib/endpointResolver";
 import { fitImage, canvasToBlob, isImageFile, toMimeType } from "../lib/imageProcessing";
 import { replaceExtension } from "../utils/naming";
@@ -120,8 +118,8 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
     throw new Error("Endpoint and API key are required before loading buckets");
   }
 
-  const target = new URL("/r2/bindings", `${endPoint}/`);
-  const response = await fetch(resolveEndpointUrl(target).toString(), {
+  const target = new URL(`${R2_API_PREFIX}/bindings`, `${endPoint}/`);
+  const response = await fetch(target.toString(), {
     headers: { [API_KEY_HEADER]: apiKey },
   });
 
@@ -132,14 +130,14 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
-    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /r2/bindings.");
+    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /api/r2/bindings.");
   }
 
   let body: unknown;
   try {
     body = (await response.json()) as unknown;
   } catch {
-    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /r2/bindings.");
+    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /api/r2/bindings.");
   }
 
   return Array.isArray(body) ? body.map(normalizeEndpointBucketBinding).filter((bucket) => bucket !== null) : [];
@@ -221,12 +219,12 @@ export async function deleteEndpointObject(record: EndpointRecord, key: string):
 
 export function publicUrlFor(record: EndpointRecord, key: string): string {
   const base = record.customDomain || record.endPoint;
-  if (record.workerBucketMode && record.bucketBindingName) {
-    const url = new URL(joinUrl(base, `bucket/${encodeURIComponent(record.bucketBindingName)}/${key}`));
-    return resolveEndpointUrl(url).toString();
-  }
-  const url = new URL(joinUrl(base, key));
-  return resolveEndpointUrl(url).toString();
+  // Worker-bucket mode shares via the short read-only alias (`/BUCKET_A/<key>`);
+  // the default bucket has no binding segment, so it stays on the r2 API path.
+  const path = record.workerBucketMode && record.bucketBindingName
+    ? `${record.bucketBindingName}/${key}`
+    : `${R2_API_PREFIX.replace(/^\/+/, "")}/${key}`;
+  return new URL(joinUrl(base, path)).toString();
 }
 
 export function createPrivateLink(): Promise<PrivateLinkResponse> {
@@ -249,11 +247,11 @@ async function endpointRequest(record: EndpointRecord, path: string, init?: Requ
 }
 
 async function endpointFetch(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
-  const prefix = record.workerBucketMode && record.bucketBindingName
+  const scope = record.workerBucketMode && record.bucketBindingName
     ? `/bucket/${encodeURIComponent(record.bucketBindingName)}`
     : "";
-  const target = new URL(`${prefix}${path}`, `${record.endPoint}/`);
-  return await fetch(resolveEndpointUrl(target).toString(), {
+  const target = new URL(`${R2_API_PREFIX}${scope}${path}`, `${record.endPoint}/`);
+  return await fetch(target.toString(), {
     ...init,
     headers: {
       [API_KEY_HEADER]: record.apiKey,

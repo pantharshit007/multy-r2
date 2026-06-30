@@ -12,12 +12,22 @@ Multy R2 is a React UI for managing multiple r2-uploader-compatible Worker endpo
 - Multiple Worker endpoints are supported.
 - Do not require Worker bindings in the UI endpoint form.
 
+## Routing
+
+- The Worker is a single first-party app served by Hono (`src/server/app.ts`).
+- `GET /`, `/assets/*`, `/buckets/*` serve the bundled SPA.
+- `/api/*` is the D1 control-plane (admin) API (JSON errors).
+- `/api/r2/*` is the r2 object API (text errors). It supports
+  `GET /api/r2/bindings`, `PATCH /api/r2` (list), and `GET|HEAD|PUT|DELETE /api/r2/:key`.
+- A binding can be selected with the `/api/r2/bucket/:bindingName/...` path scope.
+- `GET|HEAD /:bindingName/:key` is a public, read-only short alias for sharing
+  objects (e.g. `/BUCKET_A/tmp/pfp.webp`). Writes/listing stay on `/api/r2`.
+
 ## Local Worker
 
 - `src/server/index.ts` can act as a local endpoint for testing.
 - It expects an R2 binding named `R2_BUCKET` or `BUCKET_A`.
 - It expects `AUTH_KEY_SECRET` in `.dev.vars` for local auth.
-- It supports `PATCH /`, `PUT /:key`, `DELETE /:key`, and `GET /:key`.
 
 ## Commands
 
