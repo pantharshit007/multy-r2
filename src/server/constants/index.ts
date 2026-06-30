@@ -1,5 +1,5 @@
 // Route paths
-export { R2_API_PREFIX } from "../../shared/constants";
+export { R2_API_PREFIX, PUBLIC_ALIAS_PREFIX } from "../../shared/constants";
 export const API_PREFIX = "/api";
 export const BUCKET_SCOPE_BASE = "/bucket/:bindingName";
 

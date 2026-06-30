@@ -153,7 +153,7 @@ function normalizeBindingName(value: unknown): string | null {
   const binding = trimToNull(value);
   if (!binding) return null;
   if (!BINDING_NAME_REGEX.test(binding)) {
-    throw new ApiError(400, "Binding name must look like BUCKET_A");
+    throw new ApiError(400, "Binding name must be a valid R2 binding name (letters, digits, underscores)");
   }
   return binding;
 }

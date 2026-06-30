@@ -20,8 +20,8 @@ Multy R2 is a React UI for managing multiple r2-uploader-compatible Worker endpo
 - `/api/r2/*` is the r2 object API (text errors). It supports
   `GET /api/r2/bindings`, `PATCH /api/r2` (list), and `GET|HEAD|PUT|DELETE /api/r2/:key`.
 - A binding can be selected with the `/api/r2/bucket/:bindingName/...` path scope.
-- `GET|HEAD /:bindingName/:key` is a public, read-only short alias for sharing
-  objects (e.g. `/BUCKET_A/tmp/pfp.webp`). Writes/listing stay on `/api/r2`.
+- `GET|HEAD /cdn/:bindingName/:key` is a public, read-only short alias for sharing
+  objects (e.g. `/cdn/BUCKET_A/tmp/pfp.webp`). Writes/listing stay on `/api/r2`.
 
 ## Local Worker
 

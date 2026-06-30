@@ -4,9 +4,10 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
+		"gen:bindings": "node scripts/generateBucketNames.mjs",
 		"dev": "vite",
-		"wr:dev": "wrangler dev",
-		"build": "tsc -b && vite build",
+		"wr:dev": "pnpm gen:bindings && wrangler dev",
+		"build": "pnpm gen:bindings && tsc -b && vite build",
 		"preview": "vite preview",
 		"deploy": "pnpm build && wrangler deploy",
 		"migrate:local": "wrangler d1 migrations apply multy-r2 --local",

@@ -13,7 +13,7 @@ import { DEFAULT_UPLOAD_SETTINGS } from "../../shared";
 import { joinUrl } from "../../shared/utils/url";
 import { encodeKey, sanitizeKey, sanitizeFolder } from "../../shared/utils/objectKeys";
 import { guessContentType } from "../../shared/utils/contentType";
-import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE, R2_API_PREFIX } from "../../shared/constants";
+import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE, PUBLIC_ALIAS_PREFIX, R2_API_PREFIX } from "../../shared/constants";
 import { ENDPOINTS_STORAGE_KEY } from "../constants";
 import {
   normalizeEndpoint,
@@ -219,10 +219,11 @@ export async function deleteEndpointObject(record: EndpointRecord, key: string):
 
 export function publicUrlFor(record: EndpointRecord, key: string): string {
   const base = record.customDomain || record.endPoint;
-  // Worker-bucket mode shares via the short read-only alias (`/BUCKET_A/<key>`);
-  // the default bucket has no binding segment, so it stays on the r2 API path.
+  // Worker-bucket mode shares via the short read-only alias
+  // (`/cdn/BUCKET_A/<key>`); the default bucket has no binding segment, so it
+  // stays on the r2 API path.
   const path = record.workerBucketMode && record.bucketBindingName
-    ? `${record.bucketBindingName}/${key}`
+    ? `${PUBLIC_ALIAS_PREFIX.replace(/^\/+/, "")}/${record.bucketBindingName}/${key}`
     : `${R2_API_PREFIX.replace(/^\/+/, "")}/${key}`;
   return new URL(joinUrl(base, path)).toString();
 }

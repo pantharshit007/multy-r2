@@ -32,6 +32,17 @@ Use this only when testing the Worker in this repo as an endpoint.
 
 `AUTH_KEY_SECRET` and `PRIVATE_LINK_SECRET` belong to the Worker endpoint, not the browser. For local testing, `.dev.vars` gives the local Worker those secrets, and the UI stores the endpoint API key in localStorage so it can send `x-api-key`.
 
+### Naming R2 bindings
+
+When you add an R2 bucket binding (in `wrangler.jsonc` or the Cloudflare dashboard) you set two things:
+
+- **Variable name** = the binding name exposed on `env` (e.g. `BUCKET_A`). You choose this; it is what appears in share URLs (`/cdn/<binding>/<key>`).
+- **Bucket** = the real R2 bucket the binding points to (e.g. `shottr-bucket`).
+
+The two are independent, and the runtime binding does not expose its bucket name. This app reads the friendly bucket name from `wrangler.jsonc` at build time (`pnpm gen:bindings`) to label the UI dropdown; a binding added only via the dashboard still works but shows its variable name until added to `wrangler.jsonc` and rebuilt.
+
+**Recommended:** name bindings in `UPPER_SNAKE_CASE` (`BUCKET_A`, `THUMBNAILS`). The app accepts any name matching `^[A-Za-z_][A-Za-z0-9_-]*$` (letters, digits, `_`, `-`), but the Cloudflare dashboard and `wrangler deploy` conventionally expect identifier-style names, so hyphenated names like `my-super-bucket` may not be portable to production even though they run in local `wrangler dev`.
+
 For deployed Workers, use Wrangler secrets instead of committing secret values to `wrangler.jsonc`. The config declares the required secret names, and `wrangler deploy` will fail if they are missing.
 
 ## Deployment

@@ -7,12 +7,12 @@ import type { AppEnv } from "../types";
 /**
  * Public, read-only short alias for serving objects:
  *
- *   GET|HEAD /:bindingName/:key   e.g. /BUCKET_A/tmp/pfp.webp
+ *   GET|HEAD /cdn/:bindingName/:key   e.g. /cdn/BUCKET_A/tmp/pfp.webp
  *
- * This is the shareable URL form. It is mounted at `/:bindingName` so the
- * binding is exposed as a route param and reuses the endpoint object readers.
- * No auth (public read); all writes and listing stay on the authenticated
- * `/api/r2` API.
+ * This is the shareable URL form. It is mounted at `/cdn/:bindingName` (see
+ * app.ts) so the binding is exposed as a route param and reuses the endpoint
+ * object readers. No auth (public read); all writes and listing stay on the
+ * authenticated `/api/r2` API.
  */
 export const publicAliasRoutes = new Hono<AppEnv>({ strict: false });
 

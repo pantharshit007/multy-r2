@@ -3,6 +3,7 @@ import { BINDING_NAME_REGEX } from "../../shared/constants";
 import { DEFAULT_R2_BINDING_NAMES, R2_PROBE_LIMIT } from "../constants";
 import type { Env } from "../env";
 import { ApiError } from "../errors";
+import { BUCKET_NAMES } from "../generated/bucketNames";
 
 export function getBoundBucket(env: Env, bucket: Bucket): R2Bucket {
   if (!bucket.bindingName) {
@@ -47,7 +48,9 @@ export async function listEndpointBucketBindings(env: Env): Promise<EndpointBuck
         await value.list({ limit: R2_PROBE_LIMIT });
         return {
           id: bindingName,
-          name: bindingName,
+          // Friendly label is the real bucket_name from wrangler.jsonc; the
+          // binding name stays the stable identifier used in URLs.
+          name: BUCKET_NAMES[bindingName] ?? bindingName,
           bindingName,
         } satisfies EndpointBucketBinding;
       } catch {
@@ -83,7 +86,7 @@ function normalizeBucketBindingName(value: string | null): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (!BINDING_NAME_REGEX.test(trimmed)) {
-    throw new ApiError(400, "bucketId must look like BUCKET_A or BUCKET_B");
+    throw new ApiError(400, "bucketId must be a valid R2 binding name (letters, digits, underscores)");
   }
   return trimmed;
 }
