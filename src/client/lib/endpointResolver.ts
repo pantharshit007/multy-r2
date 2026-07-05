@@ -1,4 +1,4 @@
-import { EMPTY_API_BASE, FALLBACK_API_BASE, INTERNAL_PROXY_PREFIX } from "../constants";
+import { EMPTY_API_BASE, FALLBACK_API_BASE } from "../constants";
 
 export function normalizeApiBase(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "");
@@ -28,15 +28,3 @@ export function normalizeOptionalText(value: string | null | undefined): string 
   return (value ?? "").trim();
 }
 
-export function resolveEndpointUrl(target: URL): URL {
-  if (isSameOriginEndpoint(target)) {
-    return new URL(`${INTERNAL_PROXY_PREFIX}${target.pathname}${target.search}`, target.origin);
-  }
-
-  return target;
-}
-
-export function isSameOriginEndpoint(url: URL): boolean {
-  const currentOrigin = globalThis.location?.origin;
-  return Boolean(currentOrigin && url.origin === currentOrigin);
-}

@@ -2,5 +2,5 @@
 - [ ] signed links?
 - [ ] why is the structure so messed up? client and server folders are within one folder + the routing is not impressive too.
 - [ ] multi select feature
-- [ ] along with click to copy url, give the option of open in new tab (↗️)
-- [ ] the router setup is absolutely horrible, use hono instead and setup the whole thing properly.
+- [ ] there should be a way to decide on which bucket which be the default one, when multi bucket mode is not selected. (we can have a drag and drop to move the ranking)
+- [ ] check if we can just remove /cdn for single default bucket mode

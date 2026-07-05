@@ -3,6 +3,7 @@ import { BINDING_NAME_REGEX } from "../../shared/constants";
 import { DEFAULT_R2_BINDING_NAMES, R2_PROBE_LIMIT } from "../constants";
 import type { Env } from "../env";
 import { ApiError } from "../errors";
+import { BUCKET_NAMES } from "../generated/bucketNames";
 
 export function getBoundBucket(env: Env, bucket: Bucket): R2Bucket {
   if (!bucket.bindingName) {
@@ -30,12 +31,20 @@ export function getSelectedEndpointBucket(env: Env, bucketBindingName: string | 
   const bindingName = normalizeBucketBindingName(bucketBindingName);
   if (!bindingName) return getDefaultEndpointBucket(env);
 
-  const bucket = env[bindingName];
-  if (!isR2Bucket(bucket)) {
+  const bucket = getEndpointBucketBinding(env, bindingName);
+  if (!bucket) {
     throw new ApiError(400, `R2 binding '${bindingName}' is not configured on this Worker`);
   }
 
   return bucket;
+}
+
+export function getEndpointBucketBinding(env: Env, bucketBindingName: string | null): R2Bucket | null {
+  const bindingName = normalizeBucketBindingName(bucketBindingName);
+  if (!bindingName) return null;
+
+  const bucket = env[bindingName];
+  return isR2Bucket(bucket) ? bucket : null;
 }
 
 export async function listEndpointBucketBindings(env: Env): Promise<EndpointBucketBinding[]> {
@@ -47,7 +56,9 @@ export async function listEndpointBucketBindings(env: Env): Promise<EndpointBuck
         await value.list({ limit: R2_PROBE_LIMIT });
         return {
           id: bindingName,
-          name: bindingName,
+          // Friendly label is the real bucket_name from wrangler.jsonc; the
+          // binding name stays the stable identifier used in URLs.
+          name: BUCKET_NAMES[bindingName] ?? bindingName,
           bindingName,
         } satisfies EndpointBucketBinding;
       } catch {
@@ -83,7 +94,7 @@ function normalizeBucketBindingName(value: string | null): string | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   if (!BINDING_NAME_REGEX.test(trimmed)) {
-    throw new ApiError(400, "bucketId must look like BUCKET_A or BUCKET_B");
+    throw new ApiError(400, "bucketId must be a valid R2 binding name (letters, digits, underscores)");
   }
   return trimmed;
 }

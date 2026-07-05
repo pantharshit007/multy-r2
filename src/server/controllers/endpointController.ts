@@ -1,92 +1,121 @@
-import type { Env } from "../env";
+import { HEALTH_CHECK_MESSAGE } from "../constants";
 import { ApiError } from "../errors";
-import { CORS_HEADERS, json } from "../http";
-import { BUCKET_PATH_PREFIX, HEALTH_CHECK_MESSAGE, R2_BINDINGS_PATH } from "../constants";
-import { authorizeEndpointRequest } from "../middleware/auth";
-import { getSelectedEndpointBucket, listEndpointBucketBindings } from "../services/r2Buckets";
+import { getEndpointBucketBinding, getSelectedEndpointBucket, listEndpointBucketBindings } from "../services/r2Buckets";
+import type { AppContext } from "../types";
 import { guessContentTypeFromKey } from "../utils/contentType";
 import { sanitizeObjectKey } from "../utils/objectKeys";
 
-function parseBucketPath(pathname: string): { bindingName: string; objectPath: string } | null {
-  if (!pathname.startsWith(BUCKET_PATH_PREFIX)) return null;
-  const rest = pathname.slice(BUCKET_PATH_PREFIX.length);
-  const slashIndex = rest.indexOf("/");
-  if (slashIndex < 0) {
-    return { bindingName: decodeURIComponent(rest), objectPath: "/" };
-  }
-  return { bindingName: decodeURIComponent(rest.slice(0, slashIndex)), objectPath: `/${rest.slice(slashIndex + 1)}` };
+/**
+ * Resolves the R2 bucket for an endpoint request. The binding comes from the
+ * `/bucket/:bindingName` path scope; the default scope falls back to the
+ * Worker's default endpoint bucket.
+ */
+function resolveBucket(c: AppContext): R2Bucket {
+  return getSelectedEndpointBucket(c.env, c.req.param("bindingName") ?? null);
 }
 
-export async function handleEndpointApi(request: Request, env: Env, url: URL): Promise<Response> {
-  const method = request.method.toUpperCase();
+const objectKeyParam = (c: AppContext): string => sanitizeObjectKey(c.req.param("key") ?? "");
 
-  if (url.pathname === R2_BINDINGS_PATH && method === "GET") {
-    authorizeEndpointRequest(request, env);
-    return json(await listEndpointBucketBindings(env));
+export async function listBindingsHandler(c: AppContext): Promise<Response> {
+  return c.json(await listEndpointBucketBindings(c.env));
+}
+
+export function healthCheckHandler(c: AppContext): Response {
+  return c.text(HEALTH_CHECK_MESSAGE);
+}
+
+export async function listObjectsHandler(c: AppContext): Promise<Response> {
+  const bucket = resolveBucket(c);
+  const listed = await bucket.list({ cursor: c.req.query("cursor") ?? undefined });
+  return c.json({
+    objects: listed.objects,
+    truncated: listed.truncated,
+    cursor: listed.truncated ? listed.cursor : undefined,
+  });
+}
+
+export async function headObjectHandler(c: AppContext): Promise<Response> {
+  const bucket = resolveBucket(c);
+  const object = await bucket.head(objectKeyParam(c));
+  if (!object) throw new ApiError(404, "Object not found");
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  return new Response(null, { status: 200, headers });
+}
+
+export async function headPublicAliasHandler(c: AppContext): Promise<Response> {
+  const { bucket, key } = resolvePublicAlias(c);
+  const object = await bucket.head(key);
+  if (!object) throw new ApiError(404, "Object not found");
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  return new Response(null, { status: 200, headers });
+}
+
+export async function getObjectHandler(c: AppContext): Promise<Response> {
+  const bucket = resolveBucket(c);
+  const key = objectKeyParam(c);
+  const object = await bucket.get(key);
+  if (!object) throw new ApiError(404, "Object not found");
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  if (!headers.has("content-type")) {
+    headers.set("content-type", guessContentTypeFromKey(key));
+  }
+  headers.set("etag", object.httpEtag);
+  return new Response(object.body, { headers });
+}
+
+export async function getPublicAliasHandler(c: AppContext): Promise<Response> {
+  const { bucket, key } = resolvePublicAlias(c);
+  const object = await bucket.get(key);
+  if (!object) throw new ApiError(404, "Object not found");
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  if (!headers.has("content-type")) {
+    headers.set("content-type", guessContentTypeFromKey(key));
+  }
+  headers.set("etag", object.httpEtag);
+  return new Response(object.body, { headers });
+}
+
+export async function putObjectHandler(c: AppContext): Promise<Response> {
+  const bucket = resolveBucket(c);
+  const key = objectKeyParam(c);
+  await bucket.put(key, c.req.raw.body, {
+    httpMetadata: {
+      contentType: c.req.header("content-type") ?? guessContentTypeFromKey(key),
+    },
+  });
+  return c.text("Done");
+}
+
+export async function deleteObjectHandler(c: AppContext): Promise<Response> {
+  const bucket = resolveBucket(c);
+  await bucket.delete(objectKeyParam(c));
+  return c.body(null, 204);
+}
+
+function resolvePublicAlias(c: AppContext): { bucket: R2Bucket; key: string } {
+  const bindingName = c.req.param("bindingName") ?? null;
+  const routeKey = c.req.param("key") ?? "";
+  const explicitBucket = bindingName ? getEndpointBucketBinding(c.env, bindingName) : null;
+
+  if (explicitBucket) {
+    return {
+      bucket: explicitBucket,
+      key: sanitizeObjectKey(routeKey),
+    };
   }
 
-  if (url.pathname === "/" && method === "GET") {
-    return new Response(HEALTH_CHECK_MESSAGE, { headers: CORS_HEADERS });
-  }
-
-  // Determine bucket binding and effective path
-  const bucketRoute = parseBucketPath(url.pathname);
-  const bindingName = bucketRoute?.bindingName ?? url.searchParams.get("bucketBindingName") ?? null;
-  const effectivePath = bucketRoute?.objectPath ?? url.pathname;
-
-  const bucket = getSelectedEndpointBucket(env, bindingName);
-
-  if (effectivePath === "/" && method === "PATCH") {
-    authorizeEndpointRequest(request, env);
-    const listed = await bucket.list({ cursor: url.searchParams.get("cursor") ?? undefined });
-    return json({
-      objects: listed.objects,
-      truncated: listed.truncated,
-      cursor: listed.truncated ? listed.cursor : undefined,
-    });
-  }
-
-  const key = sanitizeObjectKey(decodeURIComponent(effectivePath.replace(/^\/+/, "")));
-
-  if (method === "HEAD") {
-    authorizeEndpointRequest(request, env);
-    const object = await bucket.head(key);
-    if (!object) throw new ApiError(404, "Object not found");
-
-    const headers = new Headers(CORS_HEADERS);
-    object.writeHttpMetadata(headers);
-    headers.set("etag", object.httpEtag);
-    return new Response(null, { status: 200, headers });
-  }
-
-  if (method === "GET") {
-    const object = await bucket.get(key);
-    if (!object) throw new ApiError(404, "Object not found");
-
-    const headers = new Headers(CORS_HEADERS);
-    object.writeHttpMetadata(headers);
-    if (!headers.has("content-type")) {
-      headers.set("content-type", guessContentTypeFromKey(key));
-    }
-    headers.set("etag", object.httpEtag);
-    return new Response(object.body, { headers });
-  }
-
-  authorizeEndpointRequest(request, env);
-
-  if (method === "PUT") {
-    await bucket.put(key, request.body, {
-      httpMetadata: {
-        contentType: request.headers.get("content-type") ?? guessContentTypeFromKey(key),
-      },
-    });
-    return new Response("Done", { headers: CORS_HEADERS });
-  }
-
-  if (method === "DELETE") {
-    await bucket.delete(key);
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
-  }
-
-  throw new ApiError(404, "Endpoint route not found");
+  return {
+    bucket: getSelectedEndpointBucket(c.env, null),
+    key: sanitizeObjectKey(bindingName ? `${bindingName}/${routeKey}` : routeKey),
+  };
 }

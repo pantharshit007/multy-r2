@@ -1,8 +1,14 @@
 // Route paths
+export { R2_API_PREFIX, PUBLIC_ALIAS_PREFIX } from "../../shared/constants";
 export const API_PREFIX = "/api";
-export const INTERNAL_PROXY_PREFIX = "/_internal/proxy";
-export const R2_BINDINGS_PATH = "/r2/bindings";
-export const BUCKET_PATH_PREFIX = "/bucket/";
+export const BUCKET_SCOPE_BASE = "/bucket/:bindingName";
+
+// Paths that should serve the bundled single-page app instead of an API route.
+export const UI_ASSET_PATHS = ["/", "/assets/*", "/buckets/*"] as const;
+
+// CORS
+export const CORS_ALLOWED_METHODS = ["GET", "HEAD", "PUT", "POST", "PATCH", "DELETE", "OPTIONS"] as const;
+export const CORS_ALLOWED_HEADERS = ["content-type", "x-api-key"] as const;
 
 // Object list limits
 export const DEFAULT_OBJECT_LIST_LIMIT = 100;

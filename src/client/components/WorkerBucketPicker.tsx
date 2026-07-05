@@ -11,8 +11,10 @@ export function WorkerBucketPicker({
   bucketId,
   bucketName,
   bucketBindingName,
+  bucketDomains,
   onEnabledChange,
   onBucketChange,
+  onBucketDomainsChange,
 }: {
   enabled: boolean;
   endpoint: string;
@@ -20,8 +22,10 @@ export function WorkerBucketPicker({
   bucketId: string;
   bucketName: string;
   bucketBindingName: string;
+  bucketDomains: Record<string, string>;
   onEnabledChange: (enabled: boolean) => void;
   onBucketChange: (bucket: EndpointBucketBinding | null) => void;
+  onBucketDomainsChange: (next: Record<string, string>) => void;
 }) {
   const [buckets, setBuckets] = useState<EndpointBucketBinding[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,6 +89,7 @@ export function WorkerBucketPicker({
   }, [enabled, endpoint, apiKey, bucketId, bucketBindingName]);
 
   const selectedBucketId = buckets.find((bucket) => bucket.id === bucketId || bucket.bindingName === bucketBindingName)?.id ?? "";
+  const activeBucket = buckets.find((bucket) => bucket.id === selectedBucketId) ?? null;
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
@@ -127,6 +132,22 @@ export function WorkerBucketPicker({
           {!loading && !error && buckets.length === 0 ? (
             <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 text-sm text-zinc-500">
               No buckets loaded yet.
+            </div>
+          ) : null}
+
+          {activeBucket ? (
+            <div className="grid gap-1.5 border-t border-zinc-800 pt-3">
+              <span className="text-xs uppercase tracking-[0.16em] text-zinc-500">Domain for {activeBucket.name}</span>
+              <input
+                className="h-10 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300"
+                placeholder="https://cdn.example.com"
+                value={bucketDomains[activeBucket.bindingName] ?? ""}
+                onChange={(event) => onBucketDomainsChange({ ...bucketDomains, [activeBucket.bindingName]: event.target.value })}
+              />
+              <span className="text-[11px] leading-4 text-zinc-500">
+                Enter the full URL including <code className="rounded bg-zinc-800 px-1 py-0.5 text-zinc-300">https://</code>. Serves this
+                bucket&apos;s share links (edge-cached); leave blank to use the Worker URL.
+              </span>
             </div>
           ) : null}
         </div>

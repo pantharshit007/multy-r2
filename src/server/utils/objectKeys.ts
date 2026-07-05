@@ -9,7 +9,3 @@ export function sanitizeObjectKey(value: string): string {
   }
   return key;
 }
-
-export function decodeKey(parts: string[]): string {
-  return sanitizeObjectKey(parts.map((part) => decodeURIComponent(part)).join("/"));
-}

@@ -1,8 +1,8 @@
+import { app } from "./app";
 import type { Env } from "./env";
-import { routeRequest } from "./routes";
 
 export default {
-  fetch(request: Request, env: Env): Promise<Response> {
-    return routeRequest(request, env);
+  fetch(request: Request, env: Env, ctx: ExecutionContext): Response | Promise<Response> {
+    return app.fetch(request, env, ctx);
   },
 };

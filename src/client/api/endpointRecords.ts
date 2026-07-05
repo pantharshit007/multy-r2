@@ -13,14 +13,11 @@ import { DEFAULT_UPLOAD_SETTINGS } from "../../shared";
 import { joinUrl } from "../../shared/utils/url";
 import { encodeKey, sanitizeKey, sanitizeFolder } from "../../shared/utils/objectKeys";
 import { guessContentType } from "../../shared/utils/contentType";
-import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE } from "../../shared/constants";
+import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE, PUBLIC_ALIAS_PREFIX, R2_API_PREFIX } from "../../shared/constants";
 import { ENDPOINTS_STORAGE_KEY } from "../constants";
 import {
   normalizeEndpoint,
-  normalizeOptionalEndpoint,
   normalizeOptionalText,
-  resolveEndpointUrl,
-  isSameOriginEndpoint,
 } from "../lib/endpointResolver";
 import { fitImage, canvasToBlob, isImageFile, toMimeType } from "../lib/imageProcessing";
 import { replaceExtension } from "../utils/naming";
@@ -37,11 +34,12 @@ export function listEndpointRecords(): EndpointRecord[] {
         id: record.id ?? crypto.randomUUID(),
         endPoint: normalizeEndpoint(record.endPoint ?? record.endpoint ?? ""),
         apiKey: record.apiKey ?? "",
-        customDomain: normalizeOptionalEndpoint(record.customDomain ?? ""),
+        customDomain: normalizeDomainInput(record.customDomain),
         workerBucketMode: record.workerBucketMode ?? false,
         bucketId: record.bucketId ?? "",
         bucketName: record.bucketName ?? "",
         bucketBindingName: record.bucketBindingName ?? "",
+        bucketDomains: normalizeBucketDomains(record.bucketDomains),
         uploadSettings: normalizeUploadSettings(record.uploadSettings),
       }))
       .filter((record) => record.endPoint && record.apiKey);
@@ -59,6 +57,7 @@ export function saveEndpointRecord(input: {
   bucketId?: string;
   bucketName?: string;
   bucketBindingName?: string;
+  bucketDomains?: Record<string, string>;
   uploadSettings?: Partial<UploadSettings>;
 }): EndpointRecord[] {
   const records = listEndpointRecords();
@@ -67,15 +66,17 @@ export function saveEndpointRecord(input: {
   const bucketId = workerBucketMode ? normalizeOptionalText(input.bucketId ?? existing?.bucketId ?? "") : "";
   const bucketName = workerBucketMode ? normalizeOptionalText(input.bucketName ?? existing?.bucketName ?? "") : "";
   const bucketBindingName = workerBucketMode ? normalizeBucketBindingName(input.bucketBindingName ?? existing?.bucketBindingName ?? "") : "";
+  const bucketDomains = workerBucketMode ? normalizeBucketDomains(input.bucketDomains ?? existing?.bucketDomains ?? {}) : {};
   const next: EndpointRecord = {
     id: input.id ?? crypto.randomUUID(),
     endPoint: normalizeEndpoint(input.endPoint),
     apiKey: input.apiKey.trim(),
-    customDomain: normalizeOptionalEndpoint(input.customDomain),
+    customDomain: normalizeDomainInput(input.customDomain),
     workerBucketMode,
     bucketId,
     bucketName,
     bucketBindingName,
+    bucketDomains,
     uploadSettings: input.uploadSettings ? normalizeUploadSettings(input.uploadSettings) : existing?.uploadSettings ?? cloneUploadSettings(DEFAULT_UPLOAD_SETTINGS),
   };
 
@@ -120,8 +121,8 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
     throw new Error("Endpoint and API key are required before loading buckets");
   }
 
-  const target = new URL("/r2/bindings", `${endPoint}/`);
-  const response = await fetch(resolveEndpointUrl(target).toString(), {
+  const target = new URL(`${R2_API_PREFIX}/bindings`, `${endPoint}/`);
+  const response = await fetch(target.toString(), {
     headers: { [API_KEY_HEADER]: apiKey },
   });
 
@@ -132,14 +133,14 @@ export async function listEndpointBucketBindings(input: { endPoint: string; apiK
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!contentType.toLowerCase().includes("application/json")) {
-    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /r2/bindings.");
+    throw new Error("This endpoint does not expose Multy bucket bindings. Leave multi-bucket mode off unless this Worker supports GET /api/r2/bindings.");
   }
 
   let body: unknown;
   try {
     body = (await response.json()) as unknown;
   } catch {
-    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /r2/bindings.");
+    throw new Error("This endpoint returned an invalid bucket list. Leave multi-bucket mode off unless this Worker supports GET /api/r2/bindings.");
   }
 
   return Array.isArray(body) ? body.map(normalizeEndpointBucketBinding).filter((bucket) => bucket !== null) : [];
@@ -220,13 +221,49 @@ export async function deleteEndpointObject(record: EndpointRecord, key: string):
 }
 
 export function publicUrlFor(record: EndpointRecord, key: string): string {
-  const base = record.customDomain || record.endPoint;
-  if (record.workerBucketMode && record.bucketBindingName) {
-    const url = new URL(joinUrl(base, `bucket/${encodeURIComponent(record.bucketBindingName)}/${key}`));
-    return resolveEndpointUrl(url).toString();
+  // A custom domain is bound directly to the R2 bucket and serves objects at
+  // the raw key (e.g. `https://r2.example.com/<key>`). This is the production,
+  // edge-cached path, so when present use it verbatim with no Worker prefix.
+  // In worker-bucket mode the domain is resolved per active binding.
+  const customDomain = activeCustomDomain(record);
+  if (customDomain) {
+    return buildPublicUrl(customDomain, key);
   }
-  const url = new URL(joinUrl(base, key));
-  return resolveEndpointUrl(url).toString();
+
+  // Otherwise share through the Worker endpoint (generic `*.workers.dev` or a
+  // domain bound to the Worker, which is not edge-cached):
+  //  - worker-bucket mode -> public read-only alias `/cdn/<binding>/<key>`
+  //  - default bucket      -> public read-only alias `/cdn/<key>`
+  const path = record.workerBucketMode && record.bucketBindingName
+    ? `${PUBLIC_ALIAS_PREFIX.replace(/^\/+/, "")}/${record.bucketBindingName}/${key}`
+    : `${PUBLIC_ALIAS_PREFIX.replace(/^\/+/, "")}/${key}`;
+  return buildPublicUrl(record.endPoint, path);
+}
+
+/**
+ * Joins a base origin and path into an absolute URL. The base is whatever the
+ * user typed (a custom domain may omit the scheme), so fall back to the joined
+ * string instead of throwing when it cannot be parsed as an absolute URL.
+ */
+function buildPublicUrl(base: string, path: string): string {
+  const joined = joinUrl(base, path);
+  try {
+    return new URL(joined).toString();
+  } catch {
+    return joined;
+  }
+}
+
+/**
+ * The custom domain in effect for the record's active bucket. In worker-bucket
+ * mode each binding can have its own R2 domain (`bucketDomains`); otherwise the
+ * single `customDomain` applies.
+ */
+function activeCustomDomain(record: EndpointRecord): string {
+  if (record.workerBucketMode && record.bucketBindingName) {
+    return record.bucketDomains?.[record.bucketBindingName] ?? "";
+  }
+  return record.customDomain;
 }
 
 export function createPrivateLink(): Promise<PrivateLinkResponse> {
@@ -249,11 +286,11 @@ async function endpointRequest(record: EndpointRecord, path: string, init?: Requ
 }
 
 async function endpointFetch(record: EndpointRecord, path: string, init?: RequestInit): Promise<Response> {
-  const prefix = record.workerBucketMode && record.bucketBindingName
+  const scope = record.workerBucketMode && record.bucketBindingName
     ? `/bucket/${encodeURIComponent(record.bucketBindingName)}`
     : "";
-  const target = new URL(`${prefix}${path}`, `${record.endPoint}/`);
-  return await fetch(resolveEndpointUrl(target).toString(), {
+  const target = new URL(`${R2_API_PREFIX}${scope}${path}`, `${record.endPoint}/`);
+  return await fetch(target.toString(), {
     ...init,
     headers: {
       [API_KEY_HEADER]: record.apiKey,
@@ -373,4 +410,22 @@ function normalizeEndpointBucketBinding(value: unknown): EndpointBucketBinding |
 function normalizeBucketBindingName(value: string | null | undefined): string {
   const trimmed = normalizeOptionalText(value);
   return BINDING_NAME_REGEX.test(trimmed) ? trimmed : "";
+}
+
+function normalizeDomainInput(value: string | null | undefined): string {
+  // Store exactly what the user typed (sans surrounding whitespace). We do not
+  // inject a scheme; the UI asks for a full `https://` URL. `joinUrl` strips any
+  // trailing slash at build time, and `publicUrlFor` tolerates a missing scheme.
+  return (value ?? "").trim();
+}
+
+function normalizeBucketDomains(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object") return {};
+  const result: Record<string, string> = {};
+  for (const [binding, domain] of Object.entries(value as Record<string, unknown>)) {
+    if (!BINDING_NAME_REGEX.test(binding)) continue;
+    const normalized = normalizeDomainInput(typeof domain === "string" ? domain : "");
+    if (normalized) result[binding] = normalized;
+  }
+  return result;
 }
