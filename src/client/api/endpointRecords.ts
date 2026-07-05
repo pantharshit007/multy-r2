@@ -233,10 +233,10 @@ export function publicUrlFor(record: EndpointRecord, key: string): string {
   // Otherwise share through the Worker endpoint (generic `*.workers.dev` or a
   // domain bound to the Worker, which is not edge-cached):
   //  - worker-bucket mode -> public read-only alias `/cdn/<binding>/<key>`
-  //  - default bucket      -> public GET on the r2 API path `/api/r2/<key>`
+  //  - default bucket      -> public read-only alias `/cdn/<key>`
   const path = record.workerBucketMode && record.bucketBindingName
     ? `${PUBLIC_ALIAS_PREFIX.replace(/^\/+/, "")}/${record.bucketBindingName}/${key}`
-    : `${R2_API_PREFIX.replace(/^\/+/, "")}/${key}`;
+    : `${PUBLIC_ALIAS_PREFIX.replace(/^\/+/, "")}/${key}`;
   return buildPublicUrl(record.endPoint, path);
 }
 

@@ -13,6 +13,7 @@ export const FOLDER_CONTENT_TYPE = "application/x-directory";
 export const R2_API_PREFIX = "/api/r2";
 
 // Prefix for the public, read-only short alias used to share objects:
+//   GET|HEAD /cdn/<key>
 //   GET|HEAD /cdn/<bindingName>/<key>
 // The leading segment disambiguates the alias from arbitrary two-segment paths
 // (e.g. /foo/bar) so unmatched requests get a plain 404 instead of resolving as

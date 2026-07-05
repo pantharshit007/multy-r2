@@ -36,7 +36,7 @@ Use this only when testing the Worker in this repo as an endpoint.
 
 When you add an R2 bucket binding (in `wrangler.jsonc` or the Cloudflare dashboard) you set two things:
 
-- **Variable name** = the binding name exposed on `env` (e.g. `BUCKET_A`). You choose this; it is what appears in share URLs (`/cdn/<binding>/<key>`).
+- **Variable name** = the binding name exposed on `env` (e.g. `BUCKET_A`). You choose this; it appears in multi-bucket share URLs (`/cdn/<binding>/<key>`), while single-bucket mode uses `/cdn/<key>`.
 - **Bucket** = the real R2 bucket the binding points to (e.g. `shottr-bucket`).
 
 The two are independent, and the runtime binding does not expose its bucket name. This app reads the friendly bucket name from `wrangler.jsonc` at build time (`pnpm gen:bindings`) to label the UI dropdown; a binding added only via the dashboard still works but shows its variable name until added to `wrangler.jsonc` and rebuilt.

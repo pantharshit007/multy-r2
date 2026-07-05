@@ -1,6 +1,6 @@
 import { HEALTH_CHECK_MESSAGE } from "../constants";
 import { ApiError } from "../errors";
-import { getSelectedEndpointBucket, listEndpointBucketBindings } from "../services/r2Buckets";
+import { getEndpointBucketBinding, getSelectedEndpointBucket, listEndpointBucketBindings } from "../services/r2Buckets";
 import type { AppContext } from "../types";
 import { guessContentTypeFromKey } from "../utils/contentType";
 import { sanitizeObjectKey } from "../utils/objectKeys";
@@ -45,9 +45,34 @@ export async function headObjectHandler(c: AppContext): Promise<Response> {
   return new Response(null, { status: 200, headers });
 }
 
+export async function headPublicAliasHandler(c: AppContext): Promise<Response> {
+  const { bucket, key } = resolvePublicAlias(c);
+  const object = await bucket.head(key);
+  if (!object) throw new ApiError(404, "Object not found");
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("etag", object.httpEtag);
+  return new Response(null, { status: 200, headers });
+}
+
 export async function getObjectHandler(c: AppContext): Promise<Response> {
   const bucket = resolveBucket(c);
   const key = objectKeyParam(c);
+  const object = await bucket.get(key);
+  if (!object) throw new ApiError(404, "Object not found");
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  if (!headers.has("content-type")) {
+    headers.set("content-type", guessContentTypeFromKey(key));
+  }
+  headers.set("etag", object.httpEtag);
+  return new Response(object.body, { headers });
+}
+
+export async function getPublicAliasHandler(c: AppContext): Promise<Response> {
+  const { bucket, key } = resolvePublicAlias(c);
   const object = await bucket.get(key);
   if (!object) throw new ApiError(404, "Object not found");
 
@@ -75,4 +100,22 @@ export async function deleteObjectHandler(c: AppContext): Promise<Response> {
   const bucket = resolveBucket(c);
   await bucket.delete(objectKeyParam(c));
   return c.body(null, 204);
+}
+
+function resolvePublicAlias(c: AppContext): { bucket: R2Bucket; key: string } {
+  const bindingName = c.req.param("bindingName") ?? null;
+  const routeKey = c.req.param("key") ?? "";
+  const explicitBucket = bindingName ? getEndpointBucketBinding(c.env, bindingName) : null;
+
+  if (explicitBucket) {
+    return {
+      bucket: explicitBucket,
+      key: sanitizeObjectKey(routeKey),
+    };
+  }
+
+  return {
+    bucket: getSelectedEndpointBucket(c.env, null),
+    key: sanitizeObjectKey(bindingName ? `${bindingName}/${routeKey}` : routeKey),
+  };
 }

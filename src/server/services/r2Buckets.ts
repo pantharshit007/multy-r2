@@ -31,12 +31,20 @@ export function getSelectedEndpointBucket(env: Env, bucketBindingName: string | 
   const bindingName = normalizeBucketBindingName(bucketBindingName);
   if (!bindingName) return getDefaultEndpointBucket(env);
 
-  const bucket = env[bindingName];
-  if (!isR2Bucket(bucket)) {
+  const bucket = getEndpointBucketBinding(env, bindingName);
+  if (!bucket) {
     throw new ApiError(400, `R2 binding '${bindingName}' is not configured on this Worker`);
   }
 
   return bucket;
+}
+
+export function getEndpointBucketBinding(env: Env, bucketBindingName: string | null): R2Bucket | null {
+  const bindingName = normalizeBucketBindingName(bucketBindingName);
+  if (!bindingName) return null;
+
+  const bucket = env[bindingName];
+  return isR2Bucket(bucket) ? bucket : null;
 }
 
 export async function listEndpointBucketBindings(env: Env): Promise<EndpointBucketBinding[]> {

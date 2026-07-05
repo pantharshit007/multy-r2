@@ -20,8 +20,11 @@ Multy R2 is a React UI for managing multiple Worker endpoints.
 - `/api/r2/*` is the r2 object API (text errors). It supports
   `GET /api/r2/bindings`, `PATCH /api/r2` (list), and `GET|HEAD|PUT|DELETE /api/r2/:key`.
 - A binding can be selected with the `/api/r2/bucket/:bindingName/...` path scope.
-- `GET|HEAD /cdn/:bindingName/:key` is a public, read-only short alias for sharing
-  objects (e.g. `/cdn/BUCKET_A/tmp/pfp.webp`). Writes/listing stay on `/api/r2`.
+- `GET|HEAD /cdn/:key` is the public, read-only short alias for the default
+  bucket in single-bucket mode.
+- `GET|HEAD /cdn/:bindingName/:key` is the public, read-only short alias for
+  explicit bucket selection in multi-bucket mode (e.g. `/cdn/BUCKET_A/tmp/pfp.webp`).
+  Writes/listing stay on `/api/r2`.
 - Hono URL-decodes path params automatically; do not call `decodeURIComponent`
   on `:key`/`:bindingName` params (it would double-decode).
 
