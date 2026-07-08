@@ -1,6 +1,9 @@
 - [ ] improve the whole folder structure, ui and its working can add more features (hirerachy, etc)
 - [ ] signed links?
+- [x] separate client (Pages) and server (Worker) deploys — see issue #4
 - [ ] why is the structure so messed up? client and server folders are within one folder + the routing is not impressive too.
 - [ ] multi select feature
 - [ ] there should be a way to decide on which bucket which be the default one, when multi bucket mode is not selected. (we can have a drag and drop to move the ranking)
 - [ ] check if we can just remove /cdn for single default bucket mode
+- [ ] folder shouldn't be shown with actions such as copy or open in new tab.
+- [ ] fix the shitty ai slot we have in @client/api/admin.ts there are so many function where the props are created in the parms itself, its a total mess, fix in other places too if they have any.

@@ -12,20 +12,19 @@ export interface AdminApiConfig {
 
 export function loadAdminApiConfig(): AdminApiConfig {
   const raw = localStorage.getItem(ADMIN_STORAGE_KEY);
-  const fallbackBase = window.location.origin;
 
   if (!raw) {
-    return { apiBase: fallbackBase, apiKey: "" };
+    return { apiBase: "", apiKey: "" };
   }
 
   try {
     const parsed = JSON.parse(raw) as Partial<AdminApiConfig>;
     return {
-      apiBase: resolveApiBase(parsed.apiBase ?? fallbackBase),
+      apiBase: resolveApiBase(parsed.apiBase ?? ""),
       apiKey: parsed.apiKey ?? "",
     };
   } catch {
-    return { apiBase: fallbackBase, apiKey: "" };
+    return { apiBase: "", apiKey: "" };
   }
 }
 
@@ -81,11 +80,15 @@ async function adminRequestJson<T>(config: AdminApiConfig, path: string, init?: 
 }
 
 async function adminRequest(config: AdminApiConfig, path: string, init?: RequestInit): Promise<Response> {
+  const apiBase = resolveApiBase(config.apiBase);
+  if (!apiBase) {
+    throw new Error("Set the worker admin API base first");
+  }
   if (!config.apiKey) {
     throw new Error("Set the worker admin key first");
   }
 
-  const response = await fetch(new URL(path, `${resolveApiBase(config.apiBase)}/`).toString(), {
+  const response = await fetch(new URL(path, `${apiBase}/`).toString(), {
     ...init,
     headers: {
       [API_KEY_HEADER]: config.apiKey,
