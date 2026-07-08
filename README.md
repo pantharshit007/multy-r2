@@ -1,10 +1,21 @@
 # Multy R2
 
-Personal Cloudflare R2 admin dashboard built with Vite, React, TanStack Router, Tailwind CSS v4, and Cloudflare Workers.
+Personal Cloudflare R2 dashboard built with Vite, React, TanStack Router, Tailwind CSS v4, Cloudflare Pages (client), and Cloudflare Workers (API).
+
+## Architecture
+
+Client and server deploy independently:
+
+| Piece | Host | Role |
+| --- | --- | --- |
+| Client | Cloudflare Pages | Shared SPA; endpoint records in localStorage |
+| Server | Cloudflare Worker | R2 object API, admin API, public `/cdn` aliases |
+
+Point the client at any compatible Worker (yours or others) via endpoint URL + API key. The Worker does not serve the UI bundle.
 
 ## What is implemented
 
-- r2-uploader-style endpoint records stored in localStorage.
+- Endpoint records stored in localStorage.
 - Each record stores `endPoint`, `apiKey`, and optional `customDomain`.
 - Object listing, upload, delete, and public URL copy against the selected endpoint.
 - The saved endpoint API key is sent as `x-api-key` for that endpoint only.
@@ -15,12 +26,12 @@ Personal Cloudflare R2 admin dashboard built with Vite, React, TanStack Router, 
 
 1. Install dependencies: `pnpm install`
 2. Run the UI: `pnpm dev`
-3. Add one or more r2-uploader-compatible Worker endpoints in the UI.
+3. Add one or more Multy R2 Worker endpoints in the UI (see [docs/api.md](docs/api.md)).
 4. Use each endpoint Worker API key in that endpoint's API key field.
 
 ## Local Worker Test
 
-Use this only when testing the Worker in this repo as an endpoint.
+Use this when testing the Worker in this repo as an endpoint.
 
 1. In `wrangler.jsonc`, bind your bucket as `R2_BUCKET` or `BUCKET_A`.
 2. In `.dev.vars`, set `AUTH_KEY_SECRET` and `PRIVATE_LINK_SECRET` for local testing.
@@ -47,35 +58,35 @@ For deployed Workers, use Wrangler secrets instead of committing secret values t
 
 ## Deployment
 
-This project deploys as a single Cloudflare Worker that serves both the built UI assets and the API.
+Deploy the Worker and the Pages app separately. The client is shared; each user (or account) runs their own Worker with R2 bindings, domain, and API keys.
 
-### Option 1: Wrangler from your machine
+### Worker (API)
 
-Build with `pnpm build`, then deploy with `wrangler deploy`.
+1. Configure R2 bindings and D1 in `wrangler.jsonc`.
+2. Set secrets: `AUTH_KEY_SECRET`, `PRIVATE_LINK_SECRET`.
+3. Deploy: `pnpm deploy:worker` (or `wrangler deploy` after `pnpm gen:bindings`).
 
-### Option 2: Cloudflare Workers Builds from GitHub
+### Client (Pages)
 
-1. Push the repo to GitHub.
-2. In Cloudflare dashboard, go to `Workers & Pages`.
-3. Create or open the Worker.
-4. Under `Settings` > `Builds`, connect the GitHub repo.
-5. Make sure the Worker name in Cloudflare matches the `name` in `wrangler.jsonc`.
-6. Set the build command to `pnpm build` and the deploy command to `wrangler deploy`.
-7. Add required secrets in Cloudflare, including `AUTH_KEY_SECRET` and `PRIVATE_LINK_SECRET`.
-8. Push to the connected branch to trigger automatic builds and deployments.
+1. Build: `pnpm build:client` (writes to `dist/`).
+2. Deploy: `pnpm deploy:pages` (uses Wrangler Pages + project name `multy-r2`).
+3. Or connect the GitHub repo in Cloudflare Pages with build command `pnpm build:client` and output directory `dist`.
 
-### Option 3: GitHub Actions
+After deploy, open the Pages URL and add Worker endpoint URLs + API keys in the UI. CORS on the Worker already allows browser origins (`origin: *`).
+
+### Option: GitHub Actions (Worker)
 
 This repo includes an opt-in workflow file at `.github/workflows/deploy-cloudflare.yml.disabled`.
 
 1. Rename it to `.github/workflows/deploy-cloudflare.yml` if you want GitHub Actions deploys.
 2. Add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` as GitHub repo secrets.
 3. Set `WORKER_DEPLOY_ENABLED` to `true` in the workflow or repository variables if you want the job to run.
-4. Push to `main` to deploy.
+4. Push to `main` to deploy the Worker only (not Pages).
 
 ## Notes
 
-- The endpoint Worker must support the r2-uploader example routes: `PATCH /` list, `PUT /:key` upload, `DELETE /:key` delete.
+- Full Worker route reference: [docs/api.md](docs/api.md).
 - `apiKey` is the endpoint Worker secret. The UI stores it in localStorage and sends it as `x-api-key`.
 - `customDomain` is used only for generated public URLs. If empty, public URLs use `endPoint`.
 - `wrangler.jsonc` bucket/D1 values do not create UI records. Add endpoints in the UI because endpoint records live in browser localStorage.
+- Public object aliases stay on the Worker at `/cdn/...`; they are not part of the Pages app.

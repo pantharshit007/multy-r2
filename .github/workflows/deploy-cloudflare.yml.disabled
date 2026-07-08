@@ -1,3 +1,4 @@
+# Worker-only deploy. Pages is deployed separately (pnpm deploy:pages / Cloudflare Pages).
 name: Deploy Worker
 
 on:
@@ -13,8 +14,9 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Build & Deploy Worker
+      - name: Deploy Worker
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy

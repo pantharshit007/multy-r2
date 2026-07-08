@@ -1,4 +1,4 @@
-import { EMPTY_API_BASE, FALLBACK_API_BASE } from "../constants";
+import { EMPTY_API_BASE } from "../constants";
 
 export function normalizeApiBase(value: string): string {
   const trimmed = value.trim().replace(/\/+$/, "");
@@ -9,8 +9,9 @@ export function normalizeApiBase(value: string): string {
   return `${protocol}//${trimmed}`;
 }
 
+/** Normalize a configured Worker base URL. Empty means "not set" (client is host-independent). */
 export function resolveApiBase(value: string): string {
-  return normalizeApiBase(value) || window.location.origin || FALLBACK_API_BASE;
+  return normalizeApiBase(value);
 }
 
 export function normalizeEndpoint(value: string): string {
