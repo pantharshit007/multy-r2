@@ -13,7 +13,7 @@ import type { DuplicateStrategy, EndpointRecord, ImageOutputFormat, R2ObjectSumm
 import { WorkerBucketPicker } from "../components/WorkerBucketPicker";
 import { formatBytes, describeUploadResult } from "../utils/format";
 import { buildPreviewKey, buildDerivedObjectName } from "../utils/naming";
-import { MAX_UPLOAD_HISTORY_ENTRIES } from "../constants";
+import { MAX_UPLOAD_HISTORY_ENTRIES, SETTINGS_SAVED_FEEDBACK_MS } from "../constants";
 
 export function EndpointPage() {
   const { bucketId } = useParams({ from: "/buckets/$bucketId" });
@@ -85,7 +85,7 @@ export function EndpointPage() {
         <div className="mt-4 flex flex-col justify-between gap-3 md:flex-row md:items-end">
           <div>
             <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Endpoint</p>
-            <h1 className="mt-1 break-all text-3xl font-semibold tracking-tight text-zinc-50">{record.customDomain || record.endPoint}</h1>
+            <h1 className="mt-1 break-all text-3xl font-semibold tracking-tight text-zinc-50">{displayDomain(record)}</h1>
             <p className="mt-2 break-all text-sm text-zinc-500">{record.endPoint}</p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -360,7 +360,7 @@ function ObjectRow({
   onError: (message: string | null) => void;
   onStatus: (message: string | null) => void;
 }) {
-  const publicUrl = object.publicUrl || publicUrlFor(record, object.key);
+  const publicUrl = publicUrlFor(record, object.key);
 
   async function copyPublicUrl() {
     try {
@@ -377,7 +377,7 @@ function ObjectRow({
       <span>{formatBytes(object.size)}</span>
       <span>{object.uploaded ? new Date(object.uploaded).toLocaleString() : "-"}</span>
       <span className="flex flex-wrap gap-2">
-        <button className="rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-200 hover:border-amber-300" onClick={copyPublicUrl} type="button">
+        <button className="cursor-pointer rounded-lg border border-zinc-700 px-2.5 py-1.5 text-xs text-zinc-200 hover:border-amber-300" onClick={copyPublicUrl} type="button">
           Copy URL
         </button>
         <a
@@ -410,10 +410,24 @@ function SettingsPanel({
   onStatus: (message: string | null) => void;
 }) {
   const [form, setForm] = useState(() => ({ ...record, uploadSettings: { ...record.uploadSettings } }));
+  const [saveState, setSaveState] = useState<"idle" | "saved">("idle");
+  const saveFeedbackTimer = useRef<number | null>(null);
 
   useEffect(() => {
     setForm(record);
   }, [record]);
+
+  useEffect(() => {
+    return () => {
+      if (saveFeedbackTimer.current !== null) window.clearTimeout(saveFeedbackTimer.current);
+    };
+  }, []);
+
+  function markSaved() {
+    setSaveState("saved");
+    if (saveFeedbackTimer.current !== null) window.clearTimeout(saveFeedbackTimer.current);
+    saveFeedbackTimer.current = window.setTimeout(() => setSaveState("idle"), SETTINGS_SAVED_FEEDBACK_MS);
+  }
 
   function updateForm(next: EndpointRecord) {
     setForm(next);
@@ -431,6 +445,7 @@ function SettingsPanel({
       setForm(next);
       onUpdated(next);
       onStatus("Endpoint settings saved");
+      markSaved();
     } catch (cause) {
       onError(cause instanceof Error ? cause.message : "Could not save endpoint");
     }
@@ -473,7 +488,6 @@ function SettingsPanel({
             bucketId: enabled ? form.bucketId : "",
             bucketName: enabled ? form.bucketName : "",
             bucketBindingName: enabled ? form.bucketBindingName : "",
-            bucketDomains: enabled ? form.bucketDomains : {},
           })}
           onBucketChange={(bucket) => updateForm({
             ...form,
@@ -639,12 +653,26 @@ function SettingsPanel({
           </div>
         </section>
 
-        <button className="h-11 rounded-xl bg-zinc-50 px-4 text-sm font-semibold text-zinc-950 hover:bg-amber-200" type="submit">
-          Save settings
+        <button
+          className={`h-11 rounded-xl px-4 text-sm font-semibold transition-colors ${
+            saveState === "saved"
+              ? "bg-green-400 text-zinc-950 hover:bg-green-300"
+              : "bg-zinc-50 text-zinc-950 hover:bg-amber-200"
+          }`}
+          type="submit"
+        >
+          {saveState === "saved" ? "Saved" : "Save settings"}
         </button>
       </form>
     </aside>
   );
+}
+
+function displayDomain(record: EndpointRecord): string {
+  if (record.workerBucketMode && record.bucketBindingName) {
+    return record.bucketDomains?.[record.bucketBindingName] || record.endPoint;
+  }
+  return record.customDomain || record.endPoint;
 }
 
 function findRecord(id: string): EndpointRecord | null {

@@ -66,7 +66,7 @@ export function saveEndpointRecord(input: {
   const bucketId = workerBucketMode ? normalizeOptionalText(input.bucketId ?? existing?.bucketId ?? "") : "";
   const bucketName = workerBucketMode ? normalizeOptionalText(input.bucketName ?? existing?.bucketName ?? "") : "";
   const bucketBindingName = workerBucketMode ? normalizeBucketBindingName(input.bucketBindingName ?? existing?.bucketBindingName ?? "") : "";
-  const bucketDomains = workerBucketMode ? normalizeBucketDomains(input.bucketDomains ?? existing?.bucketDomains ?? {}) : {};
+  const bucketDomains = normalizeBucketDomains(input.bucketDomains ?? existing?.bucketDomains ?? {});
   const next: EndpointRecord = {
     id: input.id ?? crypto.randomUUID(),
     endPoint: normalizeEndpoint(input.endPoint),
