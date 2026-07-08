@@ -152,7 +152,6 @@ export function DashboardPage() {
                 bucketId: enabled ? form.bucketId : "",
                 bucketName: enabled ? form.bucketName : "",
                 bucketBindingName: enabled ? form.bucketBindingName : "",
-                bucketDomains: enabled ? form.bucketDomains : {},
               })
             }
             onBucketChange={(bucket) =>
