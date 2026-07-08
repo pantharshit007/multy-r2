@@ -14,7 +14,7 @@
 		"preview": "vite preview",
 		"deploy": "pnpm deploy:worker",
 		"deploy:worker": "pnpm gen:bindings && wrangler deploy",
-		"deploy:pages": "pnpm build:client && wrangler pages deploy dist --project-name multy-r2-ui",
+		"deploy:pages": "pnpm build:client && wrangler pages deploy dist --project-name multy-r2",
 		"migrate:local": "wrangler d1 migrations apply multy-r2 --local",
 		"migrate:deploy": "wrangler d1 migrations apply multy-r2 --remote",
 		"cf-typegen": "wrangler types"
