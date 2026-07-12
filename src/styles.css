@@ -1,12 +1,122 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+
+  /* Sleeker, more professional geometric corner radius */
+  --radius-3xl: 12px;
+  --radius-2xl: 8px;
+  --radius-xl: 6px;
+  --radius-lg: 4px;
+
+  /* Remap standard Zinc colors to adapt dynamically based on active theme class */
+  --color-zinc-50: var(--color-val-50);
+  --color-zinc-100: var(--color-val-100);
+  --color-zinc-200: var(--color-val-200);
+  --color-zinc-300: var(--color-val-300);
+  --color-zinc-400: var(--color-val-400);
+  --color-zinc-500: var(--color-val-500);
+  --color-zinc-600: var(--color-val-600);
+  --color-zinc-700: var(--color-val-700);
+  --color-zinc-800: var(--color-val-800);
+  --color-zinc-850: var(--color-val-850);
+  --color-zinc-900: var(--color-val-900);
+  --color-zinc-950: var(--color-val-950);
+
+  /* Remap Green colors dynamically */
+  --color-green-200: var(--green-200);
+  --color-green-300: var(--green-300);
+  --color-green-400: var(--green-400);
+  --color-green-900: var(--green-900);
+  --color-green-950: var(--green-950);
+
+  /* Remap Red colors dynamically */
+  --color-red-200: var(--red-200);
+  --color-red-300: var(--red-300);
+  --color-red-400: var(--red-400);
+  --color-red-900: var(--red-900);
+  --color-red-950: var(--red-950);
+
+  /* Remap Amber accent colors dynamically */
+  --color-amber-200: var(--amber-200);
+  --color-amber-300: var(--amber-300);
 }
 
 :root {
   color-scheme: dark;
-  background: #09090b;
+  --bg-page: #09090b;
+
+  /* standard zinc colors mapped for dark theme */
+  --color-val-50: #fafafa;
+  --color-val-100: #f4f4f5;
+  --color-val-200: #e4e4e7;
+  --color-val-300: #d4d4d8;
+  --color-val-400: #a1a1aa;
+  --color-val-500: #71717a;
+  --color-val-600: #52525b;
+  --color-val-700: #3f3f46;
+  --color-val-800: #27272a;
+  --color-val-850: #1f1f23;
+  --color-val-900: #18181b;
+  --color-val-950: #09090b;
+
+  --green-200: #bbf7d0;
+  --green-300: #86efac;
+  --green-400: #4ade80;
+  --green-900: #14532d;
+  --green-950: #052e16;
+
+  --red-200: #fecaca;
+  --red-300: #fca5a5;
+  --red-400: #f87171;
+  --red-900: #7f1d1d;
+  --red-950: #450a0a;
+
+  --amber-200: #fde68a;
+  --amber-300: #fcd34d;
+
+  --glow-amber: rgba(251, 191, 36, 0.15);
+  --glow-green: rgba(132, 204, 22, 0.08);
+}
+
+:root.light {
+  color-scheme: light;
+  --bg-page: #f4f4f5;
+
+  /* Reversed zinc scale for light theme */
+  --color-val-50: #09090b;
+  --color-val-100: #18181b;
+  --color-val-200: #27272a;
+  --color-val-300: #3f3f46;
+  --color-val-400: #52525b;
+  --color-val-500: #71717a;
+  --color-val-600: #a1a1aa;
+  
+  --color-val-700: #e4e4e7;
+  --color-val-800: #e4e4e7;
+  --color-val-850: #d4d4d8;
+  --color-val-900: #f4f4f5;
+  --color-val-950: #ffffff;
+
+  --green-200: #14532d;
+  --green-300: #15803d;
+  --green-400: #166534;
+  --green-900: #bbf7d0;
+  --green-950: #dcfce7;
+
+  --red-200: #7f1d1d;
+  --red-300: #b91c1c;
+  --red-400: #991b1b;
+  --red-900: #fecaca;
+  --red-950: #fee2e2;
+
+  --amber-200: #b45309;
+  --amber-300: #d97706;
+
+  --glow-amber: rgba(251, 191, 36, 0.08);
+  --glow-green: rgba(132, 204, 22, 0.04);
 }
 
 body {
@@ -14,12 +124,72 @@ body {
   min-height: 100vh;
   margin: 0;
   background:
-    radial-gradient(circle at 20% 0%, rgba(251, 191, 36, 0.12), transparent 28rem),
-    radial-gradient(circle at 90% 10%, rgba(132, 204, 22, 0.08), transparent 22rem),
-    #09090b;
+    radial-gradient(circle at 20% 0%, var(--glow-amber), transparent 35rem),
+    radial-gradient(circle at 90% 10%, var(--glow-green), transparent 25rem),
+    var(--bg-page);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
 }
 
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
+
+/* Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulseStatus {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.65;
+  }
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-pulse-status {
+  animation: pulseStatus 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-val-800);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-val-700);
+}
+
+
