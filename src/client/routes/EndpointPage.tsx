@@ -140,7 +140,7 @@ export function EndpointPage() {
         {/* Global Notifications inside the file panel */}
         {error ? (
           <div className="mt-4 rounded-2xl border border-red-900/40 bg-red-950/20 p-3.5 text-xs text-red-300 animate-fade-in-up">
-            <strong className="block font-bold mb-0.5">Listing Error</strong>
+            <strong className="block font-bold mb-0.5">Error</strong>
             {error}
           </div>
         ) : null}
@@ -175,7 +175,7 @@ export function EndpointPage() {
             <FileSkeleton />
           ) : objects.length === 0 ? (
             <div className="p-8 text-center text-xs text-zinc-500 font-medium bg-zinc-900/5">
-              No files found in this bucket. Drag a file above to begin uploading.
+              No files found in this bucket. Choose or drag a file above to begin uploading.
             </div>
           ) : (
             <div className="divide-y divide-zinc-800/40">

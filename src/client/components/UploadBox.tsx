@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState, useTransition } from "react";
+import { DragEvent, FormEvent, useEffect, useRef, useState, useTransition } from "react";
 import type { EndpointRecord } from "../../shared";
 import { uploadEndpointObject, createEndpointFolder } from "../api";
 import { buildPreviewKey, buildDerivedObjectName } from "../utils/naming";
@@ -30,9 +30,52 @@ export function UploadBox({
   const [history, setHistory] = useState<string[]>([]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [renameSalt, setRenameSalt] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
   const [isPending, startTransition] = useTransition();
   const renameSignatureRef = useRef("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dragDepthRef = useRef(0);
+
+  function selectFile(next: File | null) {
+    setFile(next);
+    if (next) onError(null);
+  }
+
+  function handleDragEnter(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (disabled || isPending) return;
+    dragDepthRef.current += 1;
+    if (event.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+    }
+  }
+
+  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsDragging(false);
+    }
+  }
+
+  function handleDragOver(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (disabled || isPending) return;
+    event.dataTransfer.dropEffect = "copy";
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    dragDepthRef.current = 0;
+    setIsDragging(false);
+    if (disabled || isPending) return;
+    const dropped = event.dataTransfer.files?.[0] ?? null;
+    if (dropped) selectFile(dropped);
+  }
 
   useEffect(() => {
     setHistory([]);
@@ -103,11 +146,33 @@ export function UploadBox({
       <form className="grid gap-4" onSubmit={submit}>
         {/* Upload Area / Dropzone */}
         <div
-          onClick={() => fileInputRef.current?.click()}
-          className={`flex flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center cursor-pointer transition-all duration-200 ${
-            file
-              ? "border-amber-300/40 bg-amber-300/5 text-zinc-100"
-              : "border-zinc-800 bg-zinc-900/10 hover:border-amber-300/40 hover:bg-amber-300/2 text-zinc-400"
+          role="button"
+          tabIndex={disabled || isPending ? -1 : 0}
+          onClick={() => {
+            if (disabled || isPending) return;
+            fileInputRef.current?.click();
+          }}
+          onKeyDown={(event) => {
+            if (disabled || isPending) return;
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          className={`flex flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center transition-all duration-200 ${
+            disabled || isPending
+              ? "cursor-not-allowed opacity-60"
+              : "cursor-pointer"
+          } ${
+            isDragging
+              ? "border-amber-300 bg-amber-300/10 text-zinc-100 ring-2 ring-amber-300/20"
+              : file
+                ? "border-amber-300/40 bg-amber-300/5 text-zinc-100"
+                : "border-zinc-800 bg-zinc-900/10 hover:border-amber-300/40 hover:bg-amber-300/2 text-zinc-400"
           }`}
         >
           <input
@@ -115,7 +180,8 @@ export function UploadBox({
             key={inputNonce}
             className="sr-only"
             type="file"
-            onChange={(event) => setFile(event.target.files?.[0] ?? null)}
+            disabled={disabled || isPending}
+            onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
           />
           {file ? (
             <div className="flex flex-col items-center gap-2">
@@ -127,15 +193,24 @@ export function UploadBox({
                 <span className="mt-0.5 block text-xs text-zinc-500">
                   {(file.size / 1024).toFixed(1)} KB — Ready to upload
                 </span>
+                <span className="mt-1 block text-[11px] text-zinc-600">
+                  Click or drop another file to replace
+                </span>
               </div>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
+                isDragging
+                  ? "bg-amber-300/15 border-amber-300/40 text-amber-300"
+                  : "bg-zinc-900 border-zinc-800 text-zinc-400"
+              }`}>
                 <UploadIcon className="size-5" />
               </div>
               <div>
-                <span className="block text-sm font-medium">Choose a file to upload</span>
+                <span className="block text-sm font-medium">
+                  {isDragging ? "Drop file to select" : "Choose or drag a file to upload"}
+                </span>
                 <span className="mt-1 block text-xs text-zinc-500">
                   Any image or document up to worker limit
                 </span>

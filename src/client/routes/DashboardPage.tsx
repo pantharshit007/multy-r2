@@ -3,7 +3,7 @@ import { FormEvent, useState } from "react";
 import { deleteEndpointRecord, listEndpointRecords, saveEndpointRecord } from "../api";
 import type { EndpointRecord } from "../../shared";
 import { WorkerBucketPicker } from "../components/WorkerBucketPicker";
-import { ServerIcon, GlobeIcon, KeyIcon, RefreshIcon, TrashIcon, ChevronDownIcon } from "../components/Icons";
+import { ServerIcon, GlobeIcon, KeyIcon, RefreshIcon, TrashIcon } from "../components/Icons";
 
 type EndpointForm = {
   endPoint: string;

@@ -265,7 +265,7 @@ export function SettingsPanel({
 
               {/* Image quality */}
               <label className="grid gap-1.5 text-xs font-semibold text-zinc-400">
-                <span>Compression Quality (0.01 - 1.0)</span>
+                <span>Compression Quality (0.05 - 1.0)</span>
                 <input
                   className="h-10 w-full rounded-xl border border-zinc-850 bg-zinc-900/60 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 transition-all"
                   min="0.05"

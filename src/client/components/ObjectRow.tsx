@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { EndpointRecord, R2ObjectSummary } from "../../shared";
 import { publicUrlFor } from "../api";
 import { formatBytes } from "../utils/format";
@@ -21,26 +21,37 @@ export function ObjectRow({
 }: ObjectRowProps) {
   const publicUrl = publicUrlFor(record, object.key);
   const [copied, setCopied] = useState(false);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
 
   async function copyPublicUrl() {
     try {
       await navigator.clipboard.writeText(publicUrl);
       onStatus("Public URL copied");
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => {
+        setCopied(false);
+        copiedTimerRef.current = null;
+      }, 2000);
     } catch {
       onError(publicUrl);
     }
   }
 
-  // Detect file type for icon
-  const isFolder = object.key.endsWith("/") || (object.size === 0 && !object.key.split("/").pop()?.includes("."));
+  // Folder placeholders are written as keys ending with "/".
+  const isFolder = object.key.endsWith("/");
   const extension = object.key.split(".").pop()?.toLowerCase() || "";
   const isImage = !isFolder && ["jpg", "jpeg", "png", "gif", "webp", "svg", "ico"].includes(extension);
   const isCode = !isFolder && ["json", "txt", "js", "ts", "html", "css", "md", "sh", "yml", "yaml"].includes(extension);
 
   return (
-    <div className="grid gap-2 border-t border-zinc-800/60 px-4 py-3 text-sm text-zinc-400 md:grid-cols-[1fr_90px_190px_230px] md:items-center hover:bg-zinc-900/20 transition-all duration-150 group">
+    <div className="grid gap-2 px-4 py-3 text-sm text-zinc-400 md:grid-cols-[1fr_90px_190px_230px] md:items-center hover:bg-zinc-900/20 transition-all duration-150 group">
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 group-hover:border-zinc-700 group-hover:text-zinc-200 transition-colors">
           {isFolder ? (
