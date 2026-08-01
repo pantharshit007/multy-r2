@@ -3,6 +3,7 @@ import { listEndpointBucketBindings } from "../api";
 import type { EndpointBucketBinding } from "../../shared";
 import { normalizeApiBase } from "../lib/endpointResolver";
 import { BUCKET_PICKER_DEBOUNCE_MS } from "../constants";
+import { ChevronDownIcon, GlobeIcon, BucketIcon } from "./Icons";
 
 export function WorkerBucketPicker({
   enabled,
@@ -92,61 +93,67 @@ export function WorkerBucketPicker({
   const activeBucket = buckets.find((bucket) => bucket.id === selectedBucketId) ?? null;
 
   return (
-    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
-      <label className="flex items-start justify-between gap-4">
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-900/10 p-4">
+      <label className="flex items-start justify-between gap-4 cursor-pointer">
         <span>
-          <span className="block text-sm font-medium text-zinc-100">Multy multi-bucket Worker</span>
-          <span className="mt-1 block text-xs leading-5 text-zinc-500">
-            Check this when the endpoint is this app's Worker and should expose its active R2 bindings with the same API key.
+          <span className="block text-sm font-semibold text-zinc-100">Multi-bucket Worker Scope</span>
+          <span className="mt-1 block text-[10px] leading-relaxed text-zinc-500">
+            Check this if your Cloudflare Worker serves multiple R2 bindings under the same API key.
           </span>
         </span>
-        <input className="mt-1 h-4 w-4 accent-amber-300" type="checkbox" checked={enabled} onChange={(event) => onEnabledChange(event.target.checked)} />
+        <input className="mt-1 h-4.5 w-4.5 rounded border-zinc-800 accent-amber-300 bg-zinc-900 cursor-pointer" type="checkbox" checked={enabled} onChange={(event) => onEnabledChange(event.target.checked)} />
       </label>
 
       {enabled ? (
         <div className="mt-4 grid gap-3">
-          <div className="flex items-center justify-between gap-3 text-xs uppercase tracking-[0.16em] text-zinc-500">
-            <span>Bucket</span>
-            <span>{loading ? "Verifying..." : bucketBindingName || bucketName || "Select one"}</span>
+          <div className="flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">
+            <span>Selected Bucket Binding</span>
+            <span className="text-[10px] text-zinc-600 font-normal">{loading ? "Verifying..." : bucketBindingName || bucketName || "Select one"}</span>
           </div>
 
-          <select
-            className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300"
-            value={selectedBucketId}
-            onChange={(event) => {
-              const next = buckets.find((item) => item.id === event.target.value) ?? null;
-              onBucketChangeRef.current(next);
-            }}
-            disabled={!buckets.length || loading}
-          >
-            <option value="">{loading ? "Checking Worker bindings..." : "Select a bound bucket"}</option>
-            {buckets.map((bucket) => (
-              <option key={bucket.id} value={bucket.id}>
-                {bucket.name}
-              </option>
-            ))}
-          </select>
+          <div className="relative">
+            <BucketIcon className="absolute left-3 top-3.5 size-4.5 text-zinc-600 pointer-events-none" />
+            <select
+              className="h-11 w-full appearance-none rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-10 text-sm text-zinc-50 outline-none focus:border-amber-300/80 transition-all cursor-pointer"
+              value={selectedBucketId}
+              onChange={(event) => {
+                const next = buckets.find((item) => item.id === event.target.value) ?? null;
+                onBucketChangeRef.current(next);
+              }}
+              disabled={!buckets.length || loading}
+            >
+              <option value="">{loading ? "Checking Worker bindings..." : "Select a bound bucket"}</option>
+              {buckets.map((bucket) => (
+                <option key={bucket.id} value={bucket.id}>
+                  {bucket.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="absolute right-3 top-3.5 size-4.5 text-zinc-500 pointer-events-none" />
+          </div>
 
-          {error ? <div className="rounded-xl border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">{error}</div> : null}
-          {status ? <div className="rounded-xl border border-green-900/60 bg-green-950/40 p-3 text-sm text-green-200">{status}</div> : null}
+          {error ? <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-3 text-xs text-red-300">{error}</div> : null}
+          {status ? <div className="rounded-xl border border-green-900/40 bg-green-950/20 p-3 text-xs text-green-300">{status}</div> : null}
           {!loading && !error && buckets.length === 0 ? (
-            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 text-sm text-zinc-500">
-              No buckets loaded yet.
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-3 text-xs text-zinc-500">
+              No buckets loaded yet. Ensure your worker is running and correctly bound.
             </div>
           ) : null}
 
           {activeBucket ? (
-            <div className="grid gap-1.5 border-t border-zinc-800 pt-3">
-              <span className="text-xs uppercase tracking-[0.16em] text-zinc-500">Domain for {activeBucket.name}</span>
-              <input
-                className="h-10 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300"
-                placeholder="https://cdn.example.com"
-                value={bucketDomains[activeBucket.bindingName] ?? ""}
-                onChange={(event) => onBucketDomainsChange({ ...bucketDomains, [activeBucket.bindingName]: event.target.value })}
-              />
-              <span className="text-[11px] leading-4 text-zinc-500">
-                Enter the full URL including <code className="rounded bg-zinc-800 px-1 py-0.5 text-zinc-300">https://</code>. Serves this
-                bucket&apos;s share links (edge-cached); leave blank to use the Worker URL.
+            <div className="grid gap-1.5 border-t border-zinc-850 pt-3">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Domain for {activeBucket.name}</span>
+              <div className="relative">
+                <GlobeIcon className="absolute left-3 top-3.5 size-4 text-zinc-600" />
+                <input
+                  className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
+                  placeholder="https://cdn.example.com"
+                  value={bucketDomains[activeBucket.bindingName] ?? ""}
+                  onChange={(event) => onBucketDomainsChange({ ...bucketDomains, [activeBucket.bindingName]: event.target.value })}
+                />
+              </div>
+              <span className="text-[10px] leading-relaxed text-zinc-500">
+                Enter the full URL including <code className="bg-zinc-900 px-1 py-0.5 rounded text-zinc-400">https://</code>. Serves this bucket&apos;s share links. Leave blank to fallback to Worker endpoint.
               </span>
             </div>
           ) : null}

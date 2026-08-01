@@ -3,6 +3,7 @@ import { FormEvent, useState } from "react";
 import { deleteEndpointRecord, listEndpointRecords, saveEndpointRecord } from "../api";
 import type { EndpointRecord } from "../../shared";
 import { WorkerBucketPicker } from "../components/WorkerBucketPicker";
+import { ServerIcon, GlobeIcon, KeyIcon, RefreshIcon, TrashIcon } from "../components/Icons";
 
 type EndpointForm = {
   endPoint: string;
@@ -47,52 +48,95 @@ export function DashboardPage() {
   }
 
   return (
-    <main className="grid gap-4 lg:grid-cols-[1fr_380px]">
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-6 shadow-2xl lg:col-span-2">
-        <div className="text-xs uppercase tracking-[0.22em] text-amber-300">R2 endpoint admin</div>
-        <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight text-zinc-50 sm:text-5xl">
-          Manage saved R2 Worker endpoints.
+    <main className="grid gap-5 lg:grid-cols-[1fr_380px] animate-fade-in-up">
+      {/* Hero Header Section */}
+      <section className="rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-6 shadow-2xl backdrop-blur-xl lg:col-span-2 relative overflow-hidden">
+        {/* Glow effect */}
+        <div className="absolute left-1/4 top-0 -z-10 h-32 w-80 rounded-full bg-amber-500/5 blur-3xl" />
+        
+        <div className="text-xs font-bold uppercase tracking-[0.25em] text-amber-300">R2 Endpoint Admin</div>
+        <h1 className="mt-3.5 max-w-3xl text-4xl font-extrabold tracking-tight text-zinc-50 sm:text-5xl font-display leading-[1.1]">
+          Manage Saved Worker Endpoints
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">
-          Like r2-uploader, each endpoint stores its Worker URL, API key, and optional custom domain in localStorage.
-          The key is sent as <code className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-200">x-api-key</code> only when that endpoint is used.
+        <p className="mt-3 max-w-2xl text-xs sm:text-sm leading-relaxed text-zinc-400">
+          Store your Cloudflare Worker endpoint URL, API keys, and bucket binding paths in localStorage. 
+          The API key is securely transmitted via <code className="bg-zinc-900 px-1.5 py-0.5 rounded text-amber-200 border border-zinc-800 font-mono text-xs">x-api-key</code> headers during client requests.
         </p>
       </section>
 
-      <section className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5 shadow-2xl">
+      {/* LocalStorage Endpoints list */}
+      <section className="rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-6 shadow-2xl backdrop-blur-xl flex flex-col">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">LocalStorage</p>
-            <h2 className="mt-1 text-2xl font-semibold text-zinc-50">Endpoints</h2>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-500">LocalStorage</p>
+            <h2 className="mt-0.5 text-2xl font-bold tracking-tight text-zinc-50 font-display">Active Endpoints</h2>
           </div>
-          <button className="rounded-xl border border-zinc-700 px-3 py-2 text-sm text-zinc-300 hover:border-amber-300" onClick={() => setRecords(listEndpointRecords())} type="button">
-            Refresh
+          <button
+            className="flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/40 px-3.5 py-2 text-xs font-semibold text-zinc-300 hover:border-amber-300 hover:text-amber-200 hover:bg-amber-300/5 transition-all group"
+            onClick={() => setRecords(listEndpointRecords())}
+            type="button"
+          >
+            <RefreshIcon className="size-3.5 group-hover:rotate-180 transition-transform duration-500" />
+            <span>Refresh</span>
           </button>
         </div>
 
-        {error ? <div className="mt-4 rounded-2xl border border-red-900/60 bg-red-950/40 p-3 text-sm text-red-200">{error}</div> : null}
-
-        {records.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4 text-sm text-zinc-400">
-            <strong className="block text-zinc-100">No endpoints yet.</strong>
-            Add your r2-uploader-style Worker endpoint and API key.
+        {error ? (
+          <div className="mt-4 rounded-2xl border border-red-900/40 bg-red-950/20 p-3.5 text-xs text-red-300 animate-fade-in-up">
+            {error}
           </div>
         ) : null}
 
-        <div className="mt-4 grid gap-3">
+        {records.length === 0 ? (
+          <div className="mt-5 rounded-2xl border border-zinc-850 bg-zinc-900/10 p-5 text-center text-xs text-zinc-400 font-medium">
+            <strong className="block text-zinc-200 mb-1 text-sm font-bold font-display">No endpoints configured yet.</strong>
+            Add your worker credentials in the right panel to begin managing your buckets.
+          </div>
+        ) : null}
+
+        <div className="mt-5 grid gap-3.5">
           {records.map((record) => (
-            <div key={record.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+            <div
+              key={record.id}
+              className="rounded-2xl border border-zinc-800/80 bg-zinc-900/20 p-4 hover:border-amber-300/30 hover:bg-zinc-900/40 hover:scale-[1.01] transition-all duration-200 group relative flex flex-col justify-between"
+            >
               <Link to="/buckets/$bucketId" params={{ bucketId: record.id }} className="block">
-                <h3 className="truncate text-base font-semibold text-zinc-50">{record.customDomain || record.endPoint}</h3>
-                <p className="mt-1 truncate text-sm text-zinc-500">{record.endPoint}</p>
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-500 group-hover:border-zinc-700 group-hover:text-amber-300 transition-colors">
+                    {record.customDomain ? (
+                      <GlobeIcon className="size-4.5" />
+                    ) : (
+                      <ServerIcon className="size-4.5" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-bold text-zinc-100 group-hover:text-amber-200 transition-colors">
+                      {record.customDomain || record.endPoint}
+                    </h3>
+                    <p className="mt-0.5 truncate text-[11px] font-mono text-zinc-500">{record.endPoint}</p>
+                  </div>
+                </div>
               </Link>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs text-amber-200">endpoint</span>
-                {record.workerBucketMode ? (
-                  <span className="rounded-full border border-green-400/30 bg-green-400/10 px-2.5 py-1 text-xs text-green-200">{record.bucketBindingName || record.bucketName || "multi-bucket"}</span>
-                ) : null}
-                <button className="rounded-full border border-red-900/70 px-2.5 py-1 text-xs text-red-300 hover:bg-red-950/40" type="button" onClick={() => removeRecord(record.id)}>
-                  Remove
+              
+              <div className="mt-4 flex items-center justify-between border-t border-zinc-850/50 pt-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-xl border border-amber-300/20 bg-amber-300/5 px-2.5 py-1 text-[10px] font-semibold tracking-wider text-amber-200 uppercase">
+                    endpoint
+                  </span>
+                  {record.workerBucketMode ? (
+                    <span className="rounded-xl border border-green-400/20 bg-green-400/5 px-2.5 py-1 text-[10px] font-semibold tracking-wider text-green-200 uppercase">
+                      {record.bucketBindingName || record.bucketName || "multi-bucket"}
+                    </span>
+                  ) : null}
+                </div>
+                
+                <button
+                  className="flex items-center gap-1 cursor-pointer rounded-xl border border-red-900/60 px-2.5 py-1.5 text-[10px] font-bold text-red-400 hover:bg-red-950/40 hover:border-red-800 transition-all"
+                  type="button"
+                  onClick={() => removeRecord(record.id)}
+                >
+                  <TrashIcon className="size-3" />
+                  <span>Remove</span>
                 </button>
               </div>
             </div>
@@ -100,43 +144,65 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <aside className="rounded-3xl border border-zinc-800 bg-zinc-950/70 p-5 shadow-2xl lg:sticky lg:top-4 lg:self-start">
-        <p className="text-xs uppercase tracking-[0.2em] text-zinc-500">Add a new endpoint</p>
-        <h2 className="mt-1 text-2xl font-semibold text-zinc-50">Worker endpoint</h2>
-        <form className="mt-4 grid gap-4" onSubmit={submitEndpoint}>
-          <label className="grid gap-2 text-sm font-medium text-zinc-300">
-            Workers Endpoint
-            <input className="h-11 rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300" value={form.endPoint} onChange={(event) => setForm({ ...form, endPoint: event.target.value })} placeholder="https://bucket.user.workers.dev" required />
+      {/* Add New Endpoint sidebar/aside */}
+      <aside className="rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-6 shadow-2xl backdrop-blur-xl lg:sticky lg:top-4 lg:self-start">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-500">Configure connection</p>
+        <h2 className="mt-0.5 text-2xl font-bold tracking-tight text-zinc-50 font-display">New Endpoint</h2>
+        
+        <form className="mt-5 grid gap-4.5" onSubmit={submitEndpoint}>
+          {/* Workers Endpoint Input */}
+          <label className="grid gap-1.5 text-xs font-semibold text-zinc-400">
+            <span>Workers Endpoint</span>
+            <div className="relative">
+              <ServerIcon className="absolute left-3 top-3.5 size-4 text-zinc-600" />
+              <input
+                className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
+                value={form.endPoint}
+                onChange={(event) => setForm({ ...form, endPoint: event.target.value })}
+                placeholder="https://bucket.user.workers.dev"
+                required
+              />
+            </div>
           </label>
-          <label className="grid gap-2 text-sm font-medium text-zinc-300">
-            Workers Endpoint API Key
-            <input
-              className="h-11 rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300"
-              value={form.apiKey}
-              onChange={(event) => setForm({ ...form, apiKey: event.target.value })}
-              placeholder="treat it like your browser history"
-              type="password"
-              required
-            />
+
+          {/* Workers API Key Input */}
+          <label className="grid gap-1.5 text-xs font-semibold text-zinc-400">
+            <span>API Key</span>
+            <div className="relative">
+              <KeyIcon className="absolute left-3 top-3.5 size-4 text-zinc-600" />
+              <input
+                className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
+                value={form.apiKey}
+                onChange={(event) => setForm({ ...form, apiKey: event.target.value })}
+                placeholder="treat it like your browser history"
+                type="password"
+                required
+              />
+            </div>
           </label>
+
+          {/* Custom Domain Input */}
           {form.workerBucketMode ? null : (
-            <>
-              <label className="grid gap-2 text-sm font-medium text-zinc-300">
-                Custom Domain (Optional)
-                <input
-                  className="h-11 rounded-xl border border-zinc-700 bg-zinc-900 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300"
-                  value={form.customDomain}
-                  onChange={(event) => setForm({ ...form, customDomain: event.target.value })}
-                  placeholder="https://r2.example.com"
-                />
+            <div className="grid gap-1.5">
+              <label className="grid gap-1.5 text-xs font-semibold text-zinc-400">
+                <span>Custom Domain</span>
+                <div className="relative">
+                  <GlobeIcon className="absolute left-3 top-3.5 size-4 text-zinc-600" />
+                  <input
+                    className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
+                    value={form.customDomain}
+                    onChange={(event) => setForm({ ...form, customDomain: event.target.value })}
+                    placeholder="https://r2.example.com (optional)"
+                  />
+                </div>
               </label>
-              <p className="-mt-2 text-xs leading-5 text-zinc-500">
-                Recommended for production: connect a domain to the R2 bucket so shared files are served straight from R2 and cached at
-                the edge. Enter the full URL including <code className="rounded bg-zinc-800 px-1 py-0.5 text-zinc-300">https://</code>. Leave
-                blank to share through the Worker URL, which works but is not edge-cached.
+              <p className="text-[10px] leading-relaxed text-zinc-500">
+                Recommended for caching and edge serving. Requires a custom domain connected to your R2 bucket.
               </p>
-            </>
+            </div>
           )}
+
+          {/* Multi-bucket picker checkbox & logic */}
           <WorkerBucketPicker
             enabled={form.workerBucketMode}
             endpoint={form.endPoint}
@@ -165,10 +231,16 @@ export function DashboardPage() {
             }
             onBucketDomainsChange={(next) => setForm((current) => ({ ...current, bucketDomains: next }))}
           />
-          <p className="text-sm leading-6 text-zinc-500">
-            Check this when the Worker owns multiple buckets. Then pick the bucket from the dropdown and the app will use that binding for this endpoint.
+          
+          <p className="text-[10px] leading-relaxed text-zinc-500">
+            Check this if your Worker exposes multiple bound buckets. Pick the bucket from the generated bindings list.
           </p>
-          <button className="h-11 rounded-xl bg-zinc-50 px-4 text-sm font-semibold text-zinc-950 hover:bg-amber-200" type="submit">
+
+          {/* Save Button */}
+          <button
+            className="h-11 w-full rounded-xl bg-zinc-50 px-4 text-sm font-semibold text-zinc-950 hover:bg-amber-200 active:scale-98 transition-all cursor-pointer shadow-md shadow-white/5"
+            type="submit"
+          >
             Save To LocalStorage
           </button>
         </form>
