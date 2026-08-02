@@ -83,6 +83,22 @@ This repo includes an opt-in workflow file at `.github/workflows/deploy-cloudfla
 3. Set `WORKER_DEPLOY_ENABLED` to `true` in the workflow or repository variables if you want the job to run.
 4. Push to `main` to deploy the Worker only (not Pages).
 
+## Setup guide (users)
+
+In-app guide: open `/setup-guide` on the deployed Pages UI (or local `pnpm dev`).
+
+**How users should get the Worker:**
+
+1. **Recommended:** paste Multy’s multi-bucket Worker bundle from the rolling GitHub Release tag `worker` (published on every push to `main` via `.github/workflows/release-worker-bundle.yml`):
+   - Release: https://github.com/pantharshit007/multy-r2/releases/tag/worker
+   - View / copy (raw): https://raw.githubusercontent.com/pantharshit007/multy-r2/release-worker-js/worker.js
+   - Download: https://github.com/pantharshit007/multy-r2/releases/download/worker/worker.js
+   - Open the raw URL → select all → copy → paste into Workers → Edit code, bind R2 + secrets (type **Secret**), then add Worker URL + API key in the shared UI.
+2. **CLI:** clone/fork → edit `wrangler.jsonc` → set secrets → `pnpm deploy:worker`.
+3. **Full ownership:** fork and deploy both Worker (`pnpm deploy:worker`) and Pages (`pnpm deploy:pages`).
+
+Local bundle: `pnpm build:worker-bundle` → `dist-worker/index.js`. Do not ship the Vite SPA `dist/` as a Worker — it has no R2 bindings.
+
 ## Notes
 
 - Full Worker route reference: [docs/api.md](docs/api.md).

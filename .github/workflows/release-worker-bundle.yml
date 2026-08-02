@@ -1,0 +1,90 @@
+# Builds Multy's multi-bucket Worker JS and publishes it on every push to main
+# (direct push or merged PR). Rolling release tag: `worker`.
+#
+# View inline (select-all → copy):
+#   https://raw.githubusercontent.com/pantharshit007/multy-r2/release-worker-js/worker.js
+# Download asset:
+#   https://github.com/pantharshit007/multy-r2/releases/download/worker/worker.js
+name: Release Worker Bundle
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-worker-bundle
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Worker bundle
+        run: pnpm build:worker-bundle
+
+      - name: Prepare release asset
+        run: |
+          # Drop sourcemap comment — map is not published with the paste asset.
+          sed '/sourceMappingURL/d' dist-worker/index.js > dist-worker/worker.js
+
+      - name: Publish raw-viewable branch
+        # Release assets force download; raw.githubusercontent.com needs a repo file.
+        # Force-push a single-file branch so the setup guide can open JS inline.
+        run: |
+          set -euo pipefail
+          BUNDLE_SHA=$(git hash-object -w dist-worker/worker.js)
+          TREE=$(printf '100644 blob %s\tworker.js\n' "$BUNDLE_SHA" | git mktree)
+          COMMIT=$(git commit-tree "$TREE" -m "chore: publish worker.js from ${GITHUB_SHA}")
+          git push -f origin "$COMMIT:refs/heads/release-worker-js"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: worker
+          name: Multy R2 Worker bundle
+          target_commitish: ${{ github.sha }}
+          make_latest: true
+          overwrite_files: true
+          files: dist-worker/worker.js
+          body: |
+            Prebuilt **multi-bucket** Multy R2 Worker for Cloudflare dashboard paste.
+
+            ## View / copy
+            - Inline: https://raw.githubusercontent.com/${{ github.repository }}/release-worker-js/worker.js
+            - Download: https://github.com/${{ github.repository }}/releases/download/worker/worker.js
+
+            ## Setup
+            1. Open the inline URL → select all → copy → Workers Edit code → paste → Deploy
+            2. Settings → Variables and secrets → add as **Secret** (not Plaintext):
+               - `AUTH_KEY_SECRET`
+               - `PRIVATE_LINK_SECRET`
+            3. Bindings → R2 bucket(s): default path uses `R2_BUCKET` or `BUCKET_A`; add more bindings for multi-bucket mode
+            4. Optional: D1 binding named `DB` for control-plane routes
+            5. Open the Multy UI setup guide and add Worker URL + API key
+
+            Built from `${{ github.sha }}` on `${{ github.ref_name }}`.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

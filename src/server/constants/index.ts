@@ -6,6 +6,7 @@ export const BUCKET_SCOPE_BASE = "/bucket/:bindingName";
 // CORS
 export const CORS_ALLOWED_METHODS = ["GET", "HEAD", "PUT", "POST", "PATCH", "DELETE", "OPTIONS"] as const;
 export const CORS_ALLOWED_HEADERS = ["content-type", "x-api-key"] as const;
+export const CORS_MAX_AGE_SECONDS = 86_400;
 
 // Object list limits
 export const DEFAULT_OBJECT_LIST_LIMIT = 100;

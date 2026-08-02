@@ -1,6 +1,6 @@
 {
 	"name": "multy-r2",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -10,6 +10,7 @@
 		"build": "pnpm build:client",
 		"build:client": "tsc -b && vite build",
 		"build:worker": "pnpm gen:bindings",
+		"build:worker-bundle": "pnpm gen:bindings && wrangler deploy --dry-run --outdir=dist-worker",
 		"typecheck": "tsc -b",
 		"preview": "vite preview",
 		"deploy": "pnpm deploy:worker",

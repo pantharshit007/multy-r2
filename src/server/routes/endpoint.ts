@@ -11,7 +11,7 @@ import {
 import { BUCKET_SCOPE_BASE } from "../constants";
 import { ApiError, normalizeError } from "../errors";
 import { endpointAuth } from "../middleware/auth";
-import { corsMiddleware } from "../middleware/cors";
+import { applyCorsHeaders, corsMiddleware } from "../middleware/cors";
 import type { AppEnv } from "../types";
 
 /**
@@ -45,7 +45,9 @@ export const endpointRoutes = new Hono<AppEnv>({ strict: false });
 
 endpointRoutes.onError((error, c) => {
   const { status, message } = normalizeError(error);
-  return c.text(message, status);
+  const response = c.text(message, status);
+  applyCorsHeaders(response.headers, c.req.header("Origin"));
+  return response;
 });
 
 endpointRoutes.use("*", corsMiddleware);

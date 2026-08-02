@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { API_PREFIX, HEALTH_CHECK_MESSAGE, PUBLIC_ALIAS_PREFIX, R2_API_PREFIX } from "./constants";
+import { applyCorsHeaders, corsMiddleware } from "./middleware/cors";
 import { adminRoutes } from "./routes/admin";
 import { endpointRoutes } from "./routes/endpoint";
 import { publicAliasRoutes } from "./routes/publicAlias";
@@ -20,6 +21,17 @@ import type { AppEnv } from "./types";
  *     erroring as a bad binding lookup.
  */
 export const app = new Hono<AppEnv>({ strict: false });
+
+// Root-level CORS so every path (including unmatched / preflight) gets headers.
+// Sub-apps also mount corsMiddleware; applying twice is harmless.
+app.use("*", corsMiddleware);
+
+app.onError((error, c) => {
+  console.error(error);
+  const response = c.text(error instanceof Error ? error.message : "Internal Server Error", 500);
+  applyCorsHeaders(response.headers, c.req.header("Origin"));
+  return response;
+});
 
 app.get("/", (c) => c.text(HEALTH_CHECK_MESSAGE));
 

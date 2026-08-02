@@ -62,6 +62,12 @@ export function DashboardPage() {
           Store your Cloudflare Worker endpoint URL, API keys, and bucket binding paths in localStorage. 
           The API key is securely transmitted via <code className="bg-zinc-900 px-1.5 py-0.5 rounded text-amber-200 border border-zinc-800 font-mono text-xs">x-api-key</code> headers during client requests.
         </p>
+        <Link
+          to="/setup-guide"
+          className="mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-300/25 bg-amber-300/5 px-3.5 py-2 text-xs font-semibold text-amber-200 hover:bg-amber-300/10 hover:border-amber-300/40 transition-colors"
+        >
+          New here? Read the setup guide
+        </Link>
       </section>
 
       {/* LocalStorage Endpoints list */}
@@ -90,7 +96,10 @@ export function DashboardPage() {
         {records.length === 0 ? (
           <div className="mt-5 rounded-2xl border border-zinc-850 bg-zinc-900/10 p-5 text-center text-xs text-zinc-400 font-medium">
             <strong className="block text-zinc-200 mb-1 text-sm font-bold font-display">No endpoints configured yet.</strong>
-            Add your worker credentials in the right panel to begin managing your buckets.
+            Add your worker credentials in the right panel to begin managing your buckets.{" "}
+            <Link to="/setup-guide" className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300">
+              Need a Worker first?
+            </Link>
           </div>
         ) : null}
 
