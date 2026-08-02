@@ -10,6 +10,7 @@ import {
   WORKER_BUNDLE_DOWNLOAD_URL,
   WORKER_BUNDLE_ENTRY,
   WORKER_BUNDLE_OUTDIR,
+  WORKER_BUNDLE_RAW_URL,
   WORKER_DEFAULT_BINDING,
   WORKER_PRIVATE_LINK_SECRET_NAME,
   WORKER_RELEASE_ASSET,
@@ -382,7 +383,7 @@ export function SetupGuidePage() {
               <ol className="grid gap-5">
                 <Step n={1} title="Get Multy's Worker bundle">
                   <p>
-                    Copy the prebuilt multi-bucket Worker from the rolling{" "}
+                    Get the prebuilt multi-bucket Worker from the rolling{" "}
                     <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href={WORKER_RELEASE_URL} target="_blank" rel="noreferrer">
                       <Code>{WORKER_RELEASE_TAG}</Code> GitHub Release
                     </a>
@@ -391,15 +392,24 @@ export function SetupGuidePage() {
                   <p>
                     <a
                       className="inline-flex items-center gap-2 rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-semibold text-zinc-950 hover:bg-amber-200 transition-colors"
-                      href={WORKER_BUNDLE_DOWNLOAD_URL}
+                      href={WORKER_BUNDLE_RAW_URL}
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Copy {WORKER_RELEASE_ASSET}
+                      Open {WORKER_RELEASE_ASSET}
                     </a>
                   </p>
                   <p className="text-xs text-zinc-500">
-                    Direct URL:{" "}
+                    Opens the JS inline on GitHub (raw) — select all, copy, paste into the Worker editor.
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Raw:{" "}
+                    <a className="break-all text-amber-200/80 underline decoration-amber-300/20 hover:decoration-amber-300" href={WORKER_BUNDLE_RAW_URL} target="_blank" rel="noreferrer">
+                      {WORKER_BUNDLE_RAW_URL}
+                    </a>
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Download instead:{" "}
                     <a className="break-all text-amber-200/80 underline decoration-amber-300/20 hover:decoration-amber-300" href={WORKER_BUNDLE_DOWNLOAD_URL} target="_blank" rel="noreferrer">
                       {WORKER_BUNDLE_DOWNLOAD_URL}
                     </a>
@@ -408,6 +418,11 @@ export function SetupGuidePage() {
                     Optional local build: <Code>pnpm build:worker-bundle</Code>{" → "}
                     <Code>{WORKER_BUNDLE_OUTDIR}/{WORKER_BUNDLE_ENTRY}</Code>.
                     Paste either file into the Worker editor.
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    Local note: <Code>pnpm gen:bindings</Code> bakes friendly bucket labels from <em>your</em>{" "}
+                    <Code>wrangler.jsonc</Code> into the bundle. Runtime still resolves whatever R2 bindings you attach;
+                    only the display names in multi-bucket mode may show Multy&apos;s (or your local) bucket names.
                   </p>
                 </Step>
                 <Step n={2} title="Create a Worker (Hello World stub)">
@@ -582,9 +597,7 @@ export function SetupGuidePage() {
 
             {/* ─── 3. Connect Multy R2 ─────────────────────── */}
             <section id="connect-ui" className="scroll-mt-24 grid gap-3">
-              <h2 className="text-xl font-bold text-zinc-50 font-display">
-                {isSectionVisible("worker-paste") ? "3" : isSectionVisible("fork") ? "3" : "3"}. Connect Multy R2
-              </h2>
+              <h2 className="text-xl font-bold text-zinc-50 font-display">3. Connect Multy R2</h2>
               <ol className="grid gap-5">
                 <Step n={1} title="Open the endpoint form">
                   <p>
@@ -683,7 +696,14 @@ export function SetupGuidePage() {
                     <code className="text-zinc-300">{WORKER_RELEASE_ASSET}</code>. Users download and paste — no clone required.
                   </p>
                   <p className="mt-2 text-xs">
-                    <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href={WORKER_BUNDLE_DOWNLOAD_URL} target="_blank" rel="noreferrer">
+                    Inline:{" "}
+                    <a className="break-all text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href={WORKER_BUNDLE_RAW_URL} target="_blank" rel="noreferrer">
+                      {WORKER_BUNDLE_RAW_URL}
+                    </a>
+                  </p>
+                  <p className="mt-1 text-xs">
+                    Download:{" "}
+                    <a className="break-all text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href={WORKER_BUNDLE_DOWNLOAD_URL} target="_blank" rel="noreferrer">
                       {WORKER_BUNDLE_DOWNLOAD_URL}
                     </a>
                   </p>
@@ -691,6 +711,11 @@ export function SetupGuidePage() {
                     label="local equivalent"
                     code={`pnpm build:worker-bundle\n# → ${WORKER_BUNDLE_OUTDIR}/${WORKER_BUNDLE_ENTRY}\n# CI renames to ${WORKER_RELEASE_ASSET} on the ${WORKER_RELEASE_TAG} release`}
                   />
+                  <p className="mt-2 text-xs leading-relaxed text-zinc-500">
+                    Heads-up for local builds: friendly multi-bucket labels come from{" "}
+                    <Code>src/server/generated/bucketNames.ts</Code> (generated from your{" "}
+                    <Code>wrangler.jsonc</Code>). Binding discovery at runtime is dynamic — wrong labels are cosmetic only.
+                  </p>
                 </div>
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
                   <p className="text-sm font-bold text-zinc-100">2. CLI deploy for maintainers / power users</p>

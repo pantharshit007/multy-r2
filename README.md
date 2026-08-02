@@ -91,8 +91,9 @@ In-app guide: open `/setup-guide` on the deployed Pages UI (or local `pnpm dev`)
 
 1. **Recommended:** paste Multy’s multi-bucket Worker bundle from the rolling GitHub Release tag `worker` (published on every push to `main` via `.github/workflows/release-worker-bundle.yml`):
    - Release: https://github.com/pantharshit007/multy-r2/releases/tag/worker
+   - View / copy (raw): https://raw.githubusercontent.com/pantharshit007/multy-r2/release-worker-js/worker.js
    - Download: https://github.com/pantharshit007/multy-r2/releases/download/worker/worker.js
-   - Paste into Workers → Edit code, bind R2 + secrets (type **Secret**), then add Worker URL + API key in the shared UI.
+   - Open the raw URL → select all → copy → paste into Workers → Edit code, bind R2 + secrets (type **Secret**), then add Worker URL + API key in the shared UI.
 2. **CLI:** clone/fork → edit `wrangler.jsonc` → set secrets → `pnpm deploy:worker`.
 3. **Full ownership:** fork and deploy both Worker (`pnpm deploy:worker`) and Pages (`pnpm deploy:pages`).
 
