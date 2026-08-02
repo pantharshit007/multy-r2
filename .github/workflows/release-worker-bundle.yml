@@ -53,6 +53,11 @@ jobs:
       - name: Publish raw-viewable branch
         # Release assets force download; raw.githubusercontent.com needs a repo file.
         # Force-push a single-file branch so the setup guide can open JS inline.
+        env:
+          GIT_AUTHOR_NAME: github-actions[bot]
+          GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
+          GIT_COMMITTER_NAME: github-actions[bot]
+          GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         run: |
           set -euo pipefail
           BUNDLE_SHA=$(git hash-object -w dist-worker/worker.js)
