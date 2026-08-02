@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { getPublicAliasHandler, headPublicAliasHandler } from "../controllers/endpointController";
 import { normalizeError } from "../errors";
-import { corsMiddleware } from "../middleware/cors";
+import { applyCorsHeaders, corsMiddleware } from "../middleware/cors";
 import type { AppEnv } from "../types";
 
 /**
@@ -19,7 +19,9 @@ export const publicAliasRoutes = new Hono<AppEnv>({ strict: false });
 
 publicAliasRoutes.onError((error, c) => {
   const { status, message } = normalizeError(error);
-  return c.text(message, status);
+  const response = c.text(message, status);
+  applyCorsHeaders(response.headers, c.req.header("Origin"));
+  return response;
 });
 
 publicAliasRoutes.use("*", corsMiddleware);

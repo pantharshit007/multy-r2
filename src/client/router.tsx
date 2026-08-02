@@ -1,6 +1,8 @@
 import { createRootRoute, createRoute, createRouter, Link, Outlet } from "@tanstack/react-router";
 import { EndpointPage } from "./routes/EndpointPage";
 import { DashboardPage } from "./routes/DashboardPage";
+import { SetupGuidePage } from "./routes/SetupGuidePage";
+import { HelpIcon } from "./components/Icons";
 
 import { useEffect, useState } from "react";
 
@@ -35,6 +37,13 @@ function RootLayout() {
         </Link>
         
         <div className="flex items-center gap-3.5">
+          <Link
+            to="/setup-guide"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-800 bg-zinc-900/10 px-3 h-8 text-xs font-semibold text-zinc-400 hover:text-amber-200 hover:border-amber-300/40 transition-colors"
+          >
+            <HelpIcon className="size-3.5" />
+            Setup guide
+          </Link>
           <button
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             className="flex size-8 cursor-pointer items-center justify-center rounded-xl border border-zinc-800 bg-zinc-900/10 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-colors"
@@ -72,7 +81,13 @@ const endpointRoute = createRoute({
   component: EndpointPage,
 });
 
-const routeTree = rootRoute.addChildren([dashboardRoute, endpointRoute]);
+const setupGuideRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/setup-guide",
+  component: SetupGuidePage,
+});
+
+const routeTree = rootRoute.addChildren([dashboardRoute, endpointRoute, setupGuideRoute]);
 
 export const router = createRouter({ routeTree });
 

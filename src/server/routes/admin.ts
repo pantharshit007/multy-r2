@@ -12,7 +12,7 @@ import {
 } from "../controllers/adminController";
 import { ApiError, normalizeError } from "../errors";
 import { adminAuth } from "../middleware/auth";
-import { corsMiddleware } from "../middleware/cors";
+import { applyCorsHeaders, corsMiddleware } from "../middleware/cors";
 import type { AppEnv } from "../types";
 
 /**
@@ -25,7 +25,9 @@ export const adminRoutes = new Hono<AppEnv>({ strict: false });
 
 adminRoutes.onError((error, c) => {
   const { status, message } = normalizeError(error);
-  return c.json({ error: message }, status);
+  const response = c.json({ error: message }, status);
+  applyCorsHeaders(response.headers, c.req.header("Origin"));
+  return response;
 });
 
 adminRoutes.use("*", corsMiddleware);
