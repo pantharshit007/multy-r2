@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ReactNode } from "react";
 import {
   CLOUDFLARE_DASHBOARD_URL,
   GITHUB_ISSUES_URL,
@@ -18,6 +18,9 @@ import {
 } from "../constants";
 import { ArrowLeftIcon, ArrowUpIcon, CheckIcon, CopyIcon } from "../components/Icons";
 
+// ─── Path types & section visibility ───────────────────────────────
+type DeployPath = "recommended" | "alternate" | "full-control";
+
 const SECTIONS = [
   { id: "overview", label: "Overview" },
   { id: "requirements", label: "Requirements" },
@@ -30,6 +33,51 @@ const SECTIONS = [
   { id: "bundle", label: "JS bundle" },
   { id: "fork", label: "Full fork" },
 ] as const;
+
+/** Which sidebar sections are visible for each deploy path */
+const PATH_VISIBLE_SECTIONS: Record<DeployPath, ReadonlySet<string>> = {
+  recommended: new Set([
+    "overview", "requirements", "choose-path", "bucket",
+    "worker-paste", "connect-ui", "custom-domain", "bundle",
+  ]),
+  alternate: new Set([
+    "overview", "requirements", "choose-path", "bucket",
+    "worker-cli", "connect-ui", "custom-domain",
+  ]),
+  "full-control": new Set([
+    "overview", "requirements", "choose-path", "bucket",
+    "worker-cli", "connect-ui", "custom-domain", "fork",
+  ]),
+};
+
+const PATH_META: { key: DeployPath; title: string; subtitle: string; description: string; icon: string }[] = [
+  {
+    key: "recommended",
+    title: "Recommended",
+    subtitle: "Paste Multy's Worker JS bundle",
+    description:
+      "No local toolchain needed. Create a Worker in the Cloudflare dashboard, paste Multy's prebuilt multi-bucket worker.js, attach R2 bindings + secrets, then add the Worker URL + API key in this UI.",
+    icon: "⚡",
+  },
+  {
+    key: "alternate",
+    title: "Alternate",
+    subtitle: "CLI deploy with Wrangler",
+    description:
+      "Clone the repo, bind buckets in wrangler.jsonc, set secrets, run pnpm deploy:worker. Best when you want config-as-code and easy upgrades.",
+    icon: "⌨️",
+  },
+  {
+    key: "full-control",
+    title: "Full Control",
+    subtitle: "Fork UI + Worker",
+    description:
+      "Fork the repo, deploy Pages and Worker under your account, customize branding and features. Use this when you want your own frontend, not only your own API.",
+    icon: "🔧",
+  },
+];
+
+// ─── Reusable primitives ───────────────────────────────────────────
 
 function CodeBlock({ code, label }: { code: string; label?: string }) {
   const [copied, setCopied] = useState(false);
@@ -102,16 +150,31 @@ function GuideImage({ src, alt, caption }: { src: string; alt: string; caption?:
   );
 }
 
+/** Inline code that sits flush with surrounding text */
+function Code({ children }: { children: ReactNode }) {
+  return <code className="text-amber-200/90 align-baseline">{children}</code>;
+}
+
+// ─── Main page component ──────────────────────────────────────────
+
 export function SetupGuidePage() {
   const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
+  const [selectedPath, setSelectedPath] = useState<DeployPath>("recommended");
   const observerRef = useRef<IntersectionObserver | null>(null);
+
+  const visibleSections = useMemo(
+    () => SECTIONS.filter((s) => PATH_VISIBLE_SECTIONS[selectedPath].has(s.id)),
+    [selectedPath],
+  );
 
   // --- Active section tracking via IntersectionObserver ---
   useEffect(() => {
     // Disconnect any previous observer before setting up a new one
     observerRef.current?.disconnect();
 
-    const sectionEls = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
+    const sectionEls = visibleSections
+      .map((s) => document.getElementById(s.id))
+      .filter(Boolean) as HTMLElement[];
     if (sectionEls.length === 0) return;
 
     // rootMargin: trigger when section header enters the top 20% of viewport
@@ -130,11 +193,16 @@ export function SetupGuidePage() {
 
     for (const el of sectionEls) observerRef.current.observe(el);
     return () => observerRef.current?.disconnect();
-  }, []);
+  }, [visibleSections]);
 
   const scrollToTop = useCallback(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  const isSectionVisible = useCallback(
+    (id: string) => PATH_VISIBLE_SECTIONS[selectedPath].has(id),
+    [selectedPath],
+  );
 
   return (
     <>
@@ -155,7 +223,7 @@ export function SetupGuidePage() {
           <div className="rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-4 shadow-2xl backdrop-blur-xl">
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-500">On this page</p>
             <nav className="mt-3 grid gap-1">
-              {SECTIONS.map((section) => (
+              {visibleSections.map((section) => (
                 <a
                   key={section.id}
                   href={`#${section.id}`}
@@ -179,14 +247,16 @@ export function SetupGuidePage() {
             <h1 className="mt-3 max-w-2xl text-3xl font-extrabold tracking-tight text-zinc-50 sm:text-4xl font-display leading-[1.15]">
               Run Multy R2 on your Cloudflare account
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-400">
+            <p className="mt-3 max-w-3xl text-sm leading-relaxed text-zinc-400">
               Multy R2 splits the <strong className="text-zinc-200">shared UI</strong> (this Pages app) from{" "}
               <strong className="text-zinc-200">your Worker API</strong> (R2 bindings + secrets on your account).
+              <br/>
               You keep the keys and buckets; the browser only stores endpoint records in localStorage.
             </p>
           </header>
 
           <div className="mt-8 grid gap-10">
+            {/* ─── Overview ─────────────────────────────────── */}
             <section id="overview" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">How the pieces fit</h2>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -201,51 +271,81 @@ export function SetupGuidePage() {
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200">Server</p>
                   <p className="mt-2 text-sm font-semibold text-zinc-100">Your Worker</p>
                   <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
-                    Hono API only. Binds your R2 buckets, checks <code className="text-amber-200/90">x-api-key</code>,
-                    serves <code className="text-amber-200/90">/api/r2</code> and public <code className="text-amber-200/90">/cdn</code> aliases.
+                    Hono API only. Binds your R2 buckets, checks <Code>x-api-key</Code>,
+                    serves <Code>/api/r2</Code> and public <Code>/cdn</Code> aliases.
                   </p>
                 </div>
               </div>
             </section>
 
+            {/* ─── Requirements ─────────────────────────────── */}
             <section id="requirements" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">Requirements</h2>
               <ul className="grid gap-2 text-sm text-zinc-400">
                 <li className="flex gap-2"><span className="text-amber-300">•</span> Cloudflare account</li>
                 <li className="flex gap-2"><span className="text-amber-300">•</span> R2 enabled (free tier is enough to start)</li>
-                <li className="flex gap-2"><span className="text-amber-300">•</span> Workers (free plan works)</li>
-                <li className="flex gap-2"><span className="text-amber-300">•</span> For CLI deploy: Node.js 20+, pnpm, and Wrangler login</li>
+                <li className="flex gap-2"><span className="text-amber-300">•</span> Workers enabled (free plan works)</li>
               </ul>
+              {selectedPath !== "recommended" && (
+                <div className="mt-1 rounded-2xl border border-amber-300/15 bg-amber-300/5 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200">
+                    Additional for {selectedPath === "alternate" ? "CLI deploy" : "full fork"}
+                  </p>
+                  <ul className="mt-2 grid gap-1.5 text-sm text-zinc-400">
+                    <li className="flex gap-2"><span className="text-amber-300">•</span> <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href="https://nodejs.org/" target="_blank" rel="noreferrer">Node.js</a> 20+ and <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href="https://pnpm.io/" target="_blank" rel="noreferrer">pnpm</a></li>
+                    <li className="flex gap-2"><span className="text-amber-300">•</span> Wrangler CLI — run <Code>npx wrangler login</Code> to authenticate</li>
+                    <li className="flex gap-2"><span className="text-amber-300">•</span> Git (to clone or fork the repository)</li>
+                  </ul>
+                </div>
+              )}
             </section>
 
+            {/* ─── Choose a path ────────────────────────────── */}
             <section id="choose-path" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">Choose a path</h2>
-              <div className="grid gap-3">
-                <div className="rounded-2xl border border-amber-300/40 bg-amber-300/10 p-4">
-                  <p className="text-sm font-bold text-zinc-50">Recommended — paste Multy&apos;s Worker JS bundle</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
-                    No local toolchain. Create a Worker in the Cloudflare dashboard, paste Multy&apos;s prebuilt multi-bucket{" "}
-                    <code className="text-zinc-300">{WORKER_RELEASE_ASSET}</code>, attach R2 bindings + secrets, then add the
-                    Worker URL + API key in this UI.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
-                  <p className="text-sm font-bold text-zinc-100">Alternative — CLI deploy with Wrangler</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
-                    Clone the repo, bind buckets in <code className="text-zinc-300">wrangler.jsonc</code>, set secrets, run{" "}
-                    <code className="text-zinc-300">pnpm deploy:worker</code>. Best when you want config-as-code and easy upgrades.
-                  </p>
-                </div>
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
-                  <p className="text-sm font-bold text-zinc-100">Full control — fork UI + Worker</p>
-                  <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
-                    Fork the repo, deploy Pages and Worker under your account, customize branding and features.
-                    Use this when you want your own frontend, not only your own API.
-                  </p>
-                </div>
+              <p className="text-sm leading-relaxed text-zinc-400">
+                Pick your deployment method — the guide will <strong className="text-zinc-200">adapt to show only the steps you need</strong>.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {PATH_META.map((path) => {
+                  const isSelected = selectedPath === path.key;
+                  return (
+                    <button
+                      key={path.key}
+                      type="button"
+                      onClick={() => setSelectedPath(path.key)}
+                      className={`group relative cursor-pointer rounded-2xl border-2 p-4 text-left transition-all duration-200 ${
+                        isSelected
+                          ? "border-amber-300/60 bg-amber-300/10 shadow-[0_0_24px_-4px_rgba(251,191,36,0.15)]"
+                          : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700 hover:bg-zinc-900/50"
+                      }`}
+                    >
+                      {/* Selection indicator */}
+                      <div className={`absolute right-3 top-3 grid size-5 place-items-center rounded-full border transition-all duration-200 ${
+                        isSelected
+                          ? "border-amber-300 bg-amber-300 text-zinc-950"
+                          : "border-zinc-700 bg-zinc-900 text-transparent group-hover:border-zinc-600"
+                      }`}>
+                        <CheckIcon className="size-3" />
+                      </div>
+
+                      <span className="text-lg">{path.icon}</span>
+                      <p className={`mt-2 text-sm font-bold ${isSelected ? "text-amber-200" : "text-zinc-100"}`}>
+                        {path.title}
+                      </p>
+                      <p className={`text-xs font-medium ${isSelected ? "text-amber-200/70" : "text-zinc-500"}`}>
+                        {path.subtitle}
+                      </p>
+                      <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                        {path.description}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </section>
 
+            {/* ─── 1. Create an R2 bucket ──────────────────── */}
             <section id="bucket" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">1. Create an R2 bucket</h2>
               <ol className="grid gap-5">
@@ -265,11 +365,13 @@ export function SetupGuidePage() {
                   />
                 </Step>
                 <Step n={2} title="Create a bucket">
-                  <p>Click <strong className="text-zinc-200">Create bucket</strong>, pick a name (e.g. <code className="text-amber-200/90">my-assets</code>), create it. Repeat for each bucket you want Multy to manage.</p>
+                  <p>Click <strong className="text-zinc-200">Create bucket</strong>, pick a name (e.g. <Code>my-assets</Code>), create it. Repeat for each bucket you want Multy to manage.</p>
                 </Step>
               </ol>
             </section>
 
+            {/* ─── 2. Worker via paste (recommended) ───────── */}
+            {isSectionVisible("worker-paste") && (
             <section id="worker-paste" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">2. Paste Multy&apos;s Worker bundle (recommended)</h2>
               <p className="text-sm leading-relaxed text-zinc-400">
@@ -282,7 +384,7 @@ export function SetupGuidePage() {
                   <p>
                     Copy the prebuilt multi-bucket Worker from the rolling{" "}
                     <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href={WORKER_RELEASE_URL} target="_blank" rel="noreferrer">
-                      <code className="text-amber-200/90">{WORKER_RELEASE_TAG}</code> GitHub Release
+                      <Code>{WORKER_RELEASE_TAG}</Code> GitHub Release
                     </a>
                     . Every push to <code className="text-zinc-300">main</code> rebuilds and updates this asset.
                   </p>
@@ -303,9 +405,9 @@ export function SetupGuidePage() {
                     </a>
                   </p>
                   <p>
-                    Optional local build: <code className="text-amber-200/90"> pnpm build:worker-bundle</code> →{" "}
-                    <code className="text-amber-200/90">{WORKER_BUNDLE_OUTDIR}/{WORKER_BUNDLE_ENTRY}</code>.
-                    Paste either file into the Worker editor 
+                    Optional local build: <Code>pnpm build:worker-bundle</Code>{" → "}
+                    <Code>{WORKER_BUNDLE_OUTDIR}/{WORKER_BUNDLE_ENTRY}</Code>.
+                    Paste either file into the Worker editor.
                   </p>
                 </Step>
                 <Step n={2} title="Create a Worker (Hello World stub)">
@@ -341,7 +443,7 @@ export function SetupGuidePage() {
                     Open the Worker (under Workers & Pages) → <strong className="text-zinc-200">Edit code</strong>. 
                     <br/>
                     Select all of the content, replace it with copied code from{" "}
-                    <code className="text-amber-200/90">{WORKER_RELEASE_ASSET}</code>, then click{" "}
+                    <Code>{WORKER_RELEASE_ASSET}</Code>, then click{" "}
                     <strong className="text-zinc-200">Deploy</strong> (top right).
                   </p>
                   <GuideImage
@@ -351,7 +453,7 @@ export function SetupGuidePage() {
                   />
                   <p>
                     After deploy, opening the Worker URL should show{" "}
-                    <code className="text-amber-200/90">Multy R2 endpoint worker</code> (not Hello World).
+                    <Code>Multy R2 endpoint worker</Code> (not Hello World).
                   </p>
                 </Step>
                 <Step n={4} title="Add secrets (type must be Secret)">
@@ -360,9 +462,21 @@ export function SetupGuidePage() {
                     <strong className="text-zinc-200">+ Add</strong>. Create both:
                   </p>
                   <ul className="grid gap-1.5 text-xs text-zinc-400">
-                    <li><code className="text-amber-200/90">{WORKER_AUTH_SECRET_NAME}</code> — API key Multy sends as <code className="text-zinc-300">x-api-key</code></li>
-                    <li><code className="text-amber-200/90">{WORKER_PRIVATE_LINK_SECRET_NAME}</code> — used for signed private links</li>
+                    <li><Code>{WORKER_AUTH_SECRET_NAME}</Code> — API key Multy sends as <code className="text-zinc-300">x-api-key</code></li>
+                    <li><Code>{WORKER_PRIVATE_LINK_SECRET_NAME}</Code> — used for signed private links</li>
                   </ul>
+                  <p>
+                    Use a strong, random value for each key. You can generate one with{" "}
+                    <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href="https://www.avast.com/en-in/random-password-generator" target="_blank" rel="noreferrer">
+                      Avast&apos;s Password Generator
+                    </a>
+                    {" "}(16+ characters recommended).
+                  </p>
+                  <Callout title="Save your API key">
+                    Copy and store the <Code>{WORKER_AUTH_SECRET_NAME}</Code> value somewhere safe (e.g. a password manager or notepad) —{" "}
+                    <strong className="text-zinc-50">you will need it later</strong> when connecting this UI to your Worker.
+                    Cloudflare will not let you view Secret values after saving.
+                  </Callout>
                   <Callout title="Use Secret, not Plaintext">
                     For <strong className="text-zinc-50">both</strong> keys, set the Cloudflare type to{" "}
                     <strong className="text-zinc-50">Secret</strong> (encrypted). Do not leave them as Plaintext —
@@ -378,10 +492,10 @@ export function SetupGuidePage() {
                   <p>
                     Open <strong className="text-zinc-200">Bindings</strong> (or Overview → Bindings → Add a binding) and connect each R2 bucket.
                     For the default bucket path, use variable name{" "}
-                    <code className="text-amber-200/90">{WORKER_DEFAULT_BINDING}</code> or{" "}
-                    <code className="text-amber-200/90">{WORKER_ALT_BINDING}</code>. Add more bindings with any valid name
+                    <Code>{WORKER_DEFAULT_BINDING}</Code> or{" "}
+                    <Code>{WORKER_ALT_BINDING}</Code>. Add more bindings with any valid name
                     for multi-bucket mode in the UI. Attach D1 as{" "}
-                    <code className="text-amber-200/90">DB</code> if you use control-plane routes.
+                    <Code>DB</Code> if you use control-plane routes.
                   </p>
                   <GuideImage
                     src={SETUP_GUIDE_IMAGES.workerOverview}
@@ -397,14 +511,19 @@ export function SetupGuidePage() {
                 <Step n={6} title="Confirm the Worker is live">
                   <p>
                     Open the Worker URL again — you should still see{" "}
-                    <code className="text-amber-200/90">Multy R2 endpoint worker</code>. Save that URL; you will paste it into Multy next.
+                    <Code>Multy R2 endpoint worker</Code>. Save that URL; 
+                    <br />
+                    you will paste it into Multy next.
                   </p>
                 </Step>
               </ol>
             </section>
+            )}
 
+            {/* ─── 2b. Deploy with Wrangler (alternate / full-control) ── */}
+            {isSectionVisible("worker-cli") && (
             <section id="worker-cli" className="scroll-mt-24 grid gap-3">
-              <h2 className="text-xl font-bold text-zinc-50 font-display">2b. Deploy with Wrangler (optional)</h2>
+              <h2 className="text-xl font-bold text-zinc-50 font-display">2. Deploy with Wrangler (CLI)</h2>
               <p className="text-sm leading-relaxed text-zinc-400">
                 Use this when you want config-as-code, repeatable deploys, or D1 migrations from the CLI.
                 Wrangler bundles the same multi-bucket Worker TypeScript source.
@@ -413,26 +532,19 @@ export function SetupGuidePage() {
                 <Step n={1} title="Clone and install">
                   <CodeBlock
                     label="shell"
-                    code={`git clone ${GITHUB_REPO_URL}.git
-cd multy-r2
-pnpm install`}
+                    code={`git clone ${GITHUB_REPO_URL}.git\ncd multy-r2\npnpm install`}
                   />
                 </Step>
                 <Step n={2} title="Point wrangler.jsonc at your buckets">
                   <p>
-                    Edit <code className="text-amber-200/90">r2_buckets</code>. The <strong className="text-zinc-200">binding</strong> name
-                    (e.g. <code className="text-amber-200/90">{WORKER_DEFAULT_BINDING}</code> or{" "}
-                    <code className="text-amber-200/90">{WORKER_ALT_BINDING}</code>) is what URLs and the UI use.
+                    Edit <Code>r2_buckets</Code>. The <strong className="text-zinc-200">binding</strong> name
+                    (e.g. <Code>{WORKER_DEFAULT_BINDING}</Code> or{" "}
+                    <Code>{WORKER_ALT_BINDING}</Code>) is what URLs and the UI use.
                     The <strong className="text-zinc-200">bucket_name</strong> is the real R2 bucket.
                   </p>
                   <CodeBlock
                     label="wrangler.jsonc (excerpt)"
-                    code={`"r2_buckets": [
-  {
-    "binding": "${WORKER_DEFAULT_BINDING}",
-    "bucket_name": "my-assets"
-  }
-]`}
+                    code={`"r2_buckets": [\n  {\n    "binding": "${WORKER_DEFAULT_BINDING}",\n    "bucket_name": "my-assets"\n  }\n]`}
                   />
                   <p className="text-xs text-zinc-500">
                     Multi-bucket: add more bindings. Default scope uses the first of{" "}
@@ -442,34 +554,37 @@ pnpm install`}
                 </Step>
                 <Step n={3} title="Create D1 (if you use admin features)">
                   <p>
-                    The Worker expects a D1 binding named <code className="text-amber-200/90">DB</code>. Create a database, put its id in{" "}
-                    <code className="text-amber-200/90">wrangler.jsonc</code>, then apply migrations:
+                    The Worker expects a D1 binding named <Code>DB</Code>. Create a database, put its id in{" "}
+                    <Code>wrangler.jsonc</Code>, then apply migrations:
                   </p>
                   <CodeBlock label="shell" code={`pnpm migrate:deploy`} />
                 </Step>
                 <Step n={4} title="Set secrets">
                   <CodeBlock
                     label="shell"
-                    code={`npx wrangler secret put ${WORKER_AUTH_SECRET_NAME}
-npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
+                    code={`npx wrangler secret put ${WORKER_AUTH_SECRET_NAME}\nnpx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
                   />
                   <p>
-                    <code className="text-amber-200/90">wrangler secret put</code> stores both as encrypted Secrets (not plaintext).
-                    <code className="text-amber-200/90">{WORKER_AUTH_SECRET_NAME}</code> is the API key you paste into Multy R2.
+                    <Code>wrangler secret put</Code> stores both as encrypted Secrets (not plaintext).
+                    <Code>{WORKER_AUTH_SECRET_NAME}</Code> is the API key you paste into Multy R2.
                   </p>
                 </Step>
                 <Step n={5} title="Deploy">
                   <CodeBlock label="shell" code={`pnpm deploy:worker`} />
                   <p>
-                    Copy the Worker URL (e.g. <code className="text-amber-200/90">https://multy-r2.&lt;you&gt;.workers.dev</code>).
-                    Open it in a browser — you should see the health text <code className="text-amber-200/90">Multy R2 endpoint worker</code>.
+                    Copy the Worker URL (e.g. <Code>https://multy-r2.&lt;you&gt;.workers.dev</Code>).
+                    Open it in a browser — you should see the health text <Code>Multy R2 endpoint worker</Code>.
                   </p>
                 </Step>
               </ol>
             </section>
+            )}
 
+            {/* ─── 3. Connect Multy R2 ─────────────────────── */}
             <section id="connect-ui" className="scroll-mt-24 grid gap-3">
-              <h2 className="text-xl font-bold text-zinc-50 font-display">3. Connect Multy R2</h2>
+              <h2 className="text-xl font-bold text-zinc-50 font-display">
+                {isSectionVisible("worker-paste") ? "3" : isSectionVisible("fork") ? "3" : "3"}. Connect Multy R2
+              </h2>
               <ol className="grid gap-5">
                 <Step n={1} title="Open the endpoint form">
                   <p>
@@ -496,7 +611,7 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
                 <Step n={2} title="Optional multi-bucket mode">
                   <p>
                     If the Worker exposes several R2 bindings, enable multi-bucket mode. The UI calls{" "}
-                    <code className="text-amber-200/90">GET /api/r2/bindings</code> with your API key and lets you pick a binding.
+                    <Code>GET /api/r2/bindings</Code> with your API key and lets you pick a binding.
                     Each binding can have its own R2 custom domain entered in Multy (one domain per bucket).
                   </p>
                 </Step>
@@ -504,12 +619,13 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
                   <p>
                     Save to localStorage, then open the endpoint card. Upload, list, delete, and copy public URLs all go through{" "}
                     <strong className="text-zinc-200">your</strong> Worker — credentials never leave the browser except as{" "}
-                    <code className="text-amber-200/90">x-api-key</code> to that host.
+                    <Code>x-api-key</Code> to that host.
                   </p>
                 </Step>
               </ol>
             </section>
 
+            {/* ─── 4. Custom domain ────────────────────────── */}
             <section id="custom-domain" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">4. Custom domain (optional)</h2>
               <Callout title="R2 custom domains are per bucket">
@@ -549,6 +665,8 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
               </p>
             </section>
 
+            {/* ─── JS bundle info (recommended only) ───────── */}
+            {isSectionVisible("bundle") && (
             <section id="bundle" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">How Multy ships the Worker JS bundle</h2>
               <p className="text-sm leading-relaxed text-zinc-400">
@@ -571,9 +689,7 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
                   </p>
                   <CodeBlock
                     label="local equivalent"
-                    code={`pnpm build:worker-bundle
-# → ${WORKER_BUNDLE_OUTDIR}/${WORKER_BUNDLE_ENTRY}
-# CI renames to ${WORKER_RELEASE_ASSET} on the ${WORKER_RELEASE_TAG} release`}
+                    code={`pnpm build:worker-bundle\n# → ${WORKER_BUNDLE_OUTDIR}/${WORKER_BUNDLE_ENTRY}\n# CI renames to ${WORKER_RELEASE_ASSET} on the ${WORKER_RELEASE_TAG} release`}
                   />
                 </div>
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
@@ -592,19 +708,13 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
                   </p>
                 </div>
               </div>
-              <Callout title="Recommendation">
-                Point users at the rolling{" "}
-                <a className="text-amber-200 underline decoration-amber-300/30" href={WORKER_RELEASE_URL} target="_blank" rel="noreferrer">
-                  <code className="text-zinc-100">{WORKER_RELEASE_TAG}</code> release
-                </a>{" "}
-                (<code className="text-zinc-300">{WORKER_RELEASE_ASSET}</code>).
-                Keep the hosted Pages app as the default UI so most people only paste a Worker.
-                Offer repo + Wrangler for people who want their own deploy pipeline or a full fork.
-              </Callout>
             </section>
+            )}
 
+            {/* ─── Full fork (full-control only) ───────────── */}
+            {isSectionVisible("fork") && (
             <section id="fork" className="scroll-mt-24 grid gap-3">
-              <h2 className="text-xl font-bold text-zinc-50 font-display">Full fork: your UI and backend</h2>
+              <h2 className="text-xl font-bold text-zinc-50 font-display">5. Full fork: your UI and backend</h2>
               <ol className="grid gap-5">
                 <Step n={1} title="Fork the repository">
                   <p>
@@ -630,7 +740,9 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
                 </Step>
               </ol>
             </section>
+            )}
 
+            {/* ─── Footer ──────────────────────────────────── */}
             <section className="border-t border-zinc-850 pt-6 grid gap-2">
               <p className="text-sm text-zinc-400">
                 Stuck? Open an issue on{" "}

@@ -5,3 +5,5 @@
 - [ ] folder shouldn't be shown with actions such as copy or open in new tab.
 - [ ] fix the shitty ai slop we have in @client/api/admin.ts there are so many function where the props are created in the parms itself, its a total mess, fix in other places too if they have any.
 - [x] Add a guide in the frontend for setting up.
+
+- [ ] clean up the setupguide page code and make it more readable and modular.
