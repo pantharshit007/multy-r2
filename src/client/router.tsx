@@ -27,7 +27,8 @@ function RootLayout() {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 text-zinc-100 sm:px-6">
-      <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-zinc-900 pb-5">
+      <header className="sticky top-3 z-40 mb-6 rounded-2xl border border-zinc-800/80 bg-zinc-950/70 px-5 py-3.5 shadow-xl shadow-zinc-950/40 backdrop-blur-xl">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link to="/" className="inline-flex items-center gap-3 group" aria-label="Multy R2 home">
           <span className="grid size-10 place-items-center rounded-2xl rounded-bl-md bg-amber-300 text-sm font-black text-zinc-950 shadow-lg shadow-amber-300/15 group-hover:scale-105 group-hover:bg-amber-250 transition-all duration-300">R2</span>
           <span>
@@ -60,6 +61,7 @@ function RootLayout() {
               </svg>
             )}
           </button>
+        </div>
         </div>
       </header>
       <Outlet />

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, useRef, useCallback, type ReactNode } from "react";
 import {
   CLOUDFLARE_DASHBOARD_URL,
   GITHUB_ISSUES_URL,
@@ -16,7 +16,7 @@ import {
   WORKER_RELEASE_TAG,
   WORKER_RELEASE_URL,
 } from "../constants";
-import { ArrowLeftIcon, CheckIcon, CopyIcon } from "../components/Icons";
+import { ArrowLeftIcon, ArrowUpIcon, CheckIcon, CopyIcon } from "../components/Icons";
 
 const SECTIONS = [
   { id: "overview", label: "Overview" },
@@ -103,7 +103,41 @@ function GuideImage({ src, alt, caption }: { src: string; alt: string; caption?:
 }
 
 export function SetupGuidePage() {
+  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+
+  // --- Active section tracking via IntersectionObserver ---
+  useEffect(() => {
+    // Disconnect any previous observer before setting up a new one
+    observerRef.current?.disconnect();
+
+    const sectionEls = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
+    if (sectionEls.length === 0) return;
+
+    // rootMargin: trigger when section header enters the top 20% of viewport
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        // Pick the topmost visible section
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible.length > 0) {
+          setActiveSection(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-80px 0px -65% 0px", threshold: 0 },
+    );
+
+    for (const el of sectionEls) observerRef.current.observe(el);
+    return () => observerRef.current?.disconnect();
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
+
   return (
+    <>
     <main className="animate-fade-in-up">
       <div className="mb-5">
         <Link
@@ -116,7 +150,8 @@ export function SetupGuidePage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
-        <aside className="lg:sticky lg:top-4 lg:self-start">
+        {/* Sidebar – top offset accounts for sticky navbar height */}
+        <aside className="lg:sticky lg:top-28 lg:self-start">
           <div className="rounded-3xl border border-zinc-800/80 bg-zinc-950/70 p-4 shadow-2xl backdrop-blur-xl">
             <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-zinc-500">On this page</p>
             <nav className="mt-3 grid gap-1">
@@ -124,7 +159,11 @@ export function SetupGuidePage() {
                 <a
                   key={section.id}
                   href={`#${section.id}`}
-                  className="rounded-xl px-2.5 py-1.5 text-xs font-medium text-zinc-400 hover:bg-zinc-900 hover:text-amber-200 transition-colors"
+                  className={`rounded-xl px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                    activeSection === section.id
+                      ? "bg-amber-300/10 text-amber-200 border border-amber-300/20"
+                      : "text-zinc-400 hover:bg-zinc-900 hover:text-amber-200 border border-transparent"
+                  }`}
                 >
                   {section.label}
                 </a>
@@ -148,7 +187,7 @@ export function SetupGuidePage() {
           </header>
 
           <div className="mt-8 grid gap-10">
-            <section id="overview" className="scroll-mt-6 grid gap-3">
+            <section id="overview" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">How the pieces fit</h2>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="rounded-2xl border border-zinc-800 bg-zinc-900/30 p-4">
@@ -169,7 +208,7 @@ export function SetupGuidePage() {
               </div>
             </section>
 
-            <section id="requirements" className="scroll-mt-6 grid gap-3">
+            <section id="requirements" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">Requirements</h2>
               <ul className="grid gap-2 text-sm text-zinc-400">
                 <li className="flex gap-2"><span className="text-amber-300">•</span> Cloudflare account</li>
@@ -179,7 +218,7 @@ export function SetupGuidePage() {
               </ul>
             </section>
 
-            <section id="choose-path" className="scroll-mt-6 grid gap-3">
+            <section id="choose-path" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">Choose a path</h2>
               <div className="grid gap-3">
                 <div className="rounded-2xl border border-amber-300/40 bg-amber-300/10 p-4">
@@ -207,7 +246,7 @@ export function SetupGuidePage() {
               </div>
             </section>
 
-            <section id="bucket" className="scroll-mt-6 grid gap-3">
+            <section id="bucket" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">1. Create an R2 bucket</h2>
               <ol className="grid gap-5">
                 <Step n={1} title="Open R2 in the dashboard">
@@ -231,7 +270,7 @@ export function SetupGuidePage() {
               </ol>
             </section>
 
-            <section id="worker-paste" className="scroll-mt-6 grid gap-3">
+            <section id="worker-paste" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">2. Paste Multy&apos;s Worker bundle (recommended)</h2>
               <p className="text-sm leading-relaxed text-zinc-400">
                 Fastest path for most users — dashboard only, no Node/pnpm required. The paste target is{" "}
@@ -364,7 +403,7 @@ export function SetupGuidePage() {
               </ol>
             </section>
 
-            <section id="worker-cli" className="scroll-mt-6 grid gap-3">
+            <section id="worker-cli" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">2b. Deploy with Wrangler (optional)</h2>
               <p className="text-sm leading-relaxed text-zinc-400">
                 Use this when you want config-as-code, repeatable deploys, or D1 migrations from the CLI.
@@ -429,7 +468,7 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
               </ol>
             </section>
 
-            <section id="connect-ui" className="scroll-mt-6 grid gap-3">
+            <section id="connect-ui" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">3. Connect Multy R2</h2>
               <ol className="grid gap-5">
                 <Step n={1} title="Open the endpoint form">
@@ -471,7 +510,7 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
               </ol>
             </section>
 
-            <section id="custom-domain" className="scroll-mt-6 grid gap-3">
+            <section id="custom-domain" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">4. Custom domain (optional)</h2>
               <Callout title="R2 custom domains are per bucket">
                 A custom domain connected to R2 is <strong className="text-zinc-100">one domain (or subdomain) per bucket</strong>.
@@ -510,7 +549,7 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
               </p>
             </section>
 
-            <section id="bundle" className="scroll-mt-6 grid gap-3">
+            <section id="bundle" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">How Multy ships the Worker JS bundle</h2>
               <p className="text-sm leading-relaxed text-zinc-400">
                 Multy is TypeScript + Hono. There is no hand-written single file in the repo root — Wrangler produces the final multi-bucket bundle.
@@ -564,7 +603,7 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
               </Callout>
             </section>
 
-            <section id="fork" className="scroll-mt-6 grid gap-3">
+            <section id="fork" className="scroll-mt-24 grid gap-3">
               <h2 className="text-xl font-bold text-zinc-50 font-display">Full fork: your UI and backend</h2>
               <ol className="grid gap-5">
                 <Step n={1} title="Fork the repository">
@@ -611,5 +650,16 @@ npx wrangler secret put ${WORKER_PRIVATE_LINK_SECRET_NAME}`}
         </article>
       </div>
     </main>
+
+      {/* Outside animated main — transform on ancestors breaks position:fixed */}
+      <button
+        type="button"
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+        className="fixed bottom-6 right-6 z-50 grid size-10 cursor-pointer place-items-center rounded-2xl border border-amber-300/30 bg-zinc-950/80 text-amber-200 shadow-lg shadow-amber-300/10 backdrop-blur-xl transition-all duration-300 hover:scale-110 hover:border-amber-300/60 hover:bg-amber-300/10"
+      >
+        <ArrowUpIcon className="size-5" />
+      </button>
+    </>
   );
 }
