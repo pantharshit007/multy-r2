@@ -133,7 +133,7 @@ export function WorkerBucketPicker({
                 </option>
               ))}
             </select>
-            <ChevronDownIcon className="absolute right-3 top-3.5 size-4.5 text-zinc-500 pointer-events-none" />
+            <ChevronDownIcon className="absolute right-3 top-3.5 size-4.5 pointer-events-none" />
           </div>
 
           {error ? <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-3 text-xs text-red-300">{error}</div> : null}

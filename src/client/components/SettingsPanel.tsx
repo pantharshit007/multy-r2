@@ -64,7 +64,7 @@ export function SettingsPanel({
   return (
     <aside className="rounded-3xl border border-zinc-800/80 bg-zinc-950/80 p-5 shadow-2xl shadow-black/20 lg:sticky lg:top-4 lg:self-start">
       <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-zinc-500">
-        <SettingsIcon className="size-4 text-zinc-600" />
+        <SettingsIcon className="size-4" />
         <span>Settings</span>
       </div>
       <h2 className="mt-1 text-2xl font-bold tracking-tight text-zinc-50 font-display">Endpoint Panel</h2>
@@ -93,7 +93,7 @@ export function SettingsPanel({
         <label className="grid gap-1.5 text-xs font-semibold text-zinc-400">
           <span>API Key</span>
           <div className="relative">
-            <KeyIcon className="absolute left-3 top-3.5 size-4 text-zinc-600" />
+            <KeyIcon className="absolute left-3 top-3.5 size-4" />
             <input
               className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
               value={form.apiKey}
@@ -164,7 +164,7 @@ export function SettingsPanel({
               <option value="skip">Skip file if key exists</option>
               <option value="rename">Rename with random ID suffix</option>
             </select>
-            <ChevronDownIcon className="absolute right-3.5 top-3.5 size-4 text-zinc-500 pointer-events-none" />
+            <ChevronDownIcon className="absolute right-3.5 top-3.5 size-4 pointer-events-none" />
           </div>
           <span className="text-[10px] leading-relaxed text-zinc-500 mt-1 block">
             Overwrite replaces existing objects, while renaming appends a short random identifier to make each upload unique.
@@ -179,13 +179,13 @@ export function SettingsPanel({
             onClick={() => setImageSettingsOpen(!imageSettingsOpen)}
           >
             <div className="flex items-center gap-2">
-              <ImageIcon className="size-4 text-zinc-500" />
+              <ImageIcon className="size-4" />
               <span className="text-xs font-bold text-zinc-300 font-display">Image Upload Processing</span>
             </div>
             {imageSettingsOpen ? (
-              <ChevronUpIcon className="size-4 text-zinc-500" />
+              <ChevronUpIcon className="size-4" />
             ) : (
-              <ChevronDownIcon className="size-4 text-zinc-500" />
+              <ChevronDownIcon className="size-4" />
             )}
           </button>
 
@@ -263,7 +263,7 @@ export function SettingsPanel({
                     <option value="jpeg">JPEG</option>
                     <option value="png">PNG</option>
                   </select>
-                  <ChevronDownIcon className="absolute right-3 top-3 size-4 text-zinc-500 pointer-events-none" />
+                  <ChevronDownIcon className="absolute right-3 top-3 size-4 pointer-events-none" />
                 </div>
               </label>
 

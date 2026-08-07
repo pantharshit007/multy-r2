@@ -275,7 +275,7 @@ export function UploadBox({
                 setIsEditingName(true);
               }}
             >
-              <FileIcon className="size-4 shrink-0 text-zinc-600" />
+              <FileIcon className="size-4 shrink-0" />
               <span className="truncate">{resolvedName || "temp/name.jpg"}</span>
             </button>
           )}

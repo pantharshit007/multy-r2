@@ -42,6 +42,9 @@
   /* Remap Amber accent colors dynamically */
   --color-amber-200: var(--amber-200);
   --color-amber-300: var(--amber-300);
+
+  /* Icon stroke accent: amber in dark, zinc in light (see --icon-accent below). */
+  --color-icon-accent: var(--icon-accent);
 }
 
 :root {
@@ -76,6 +79,9 @@
 
   --amber-200: #fde68a;
   --amber-300: #fcd34d;
+
+  /* Decorative icons: theme amber on dark backgrounds */
+  --icon-accent: var(--amber-300);
 
   --glow-amber: rgba(251, 191, 36, 0.15);
   --glow-green: rgba(132, 204, 22, 0.08);
@@ -114,6 +120,9 @@
 
   --amber-200: #b45309;
   --amber-300: #d97706;
+
+  /* Decorative icons: zinc on light backgrounds (amber washes out) */
+  --icon-accent: var(--color-val-500);
 
   --glow-amber: rgba(251, 191, 36, 0.08);
   --glow-green: rgba(132, 204, 22, 0.04);
