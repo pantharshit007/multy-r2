@@ -164,11 +164,11 @@ export function EndpointPage() {
 
         {/* Object Tables */}
         <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950/20">
-          <div className="hidden grid-cols-[1fr_90px_190px_230px] gap-3 bg-zinc-900/40 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 border-b border-zinc-850 md:grid">
+          <div className="hidden grid-cols-[minmax(0,1fr)_4.5rem_9.5rem_6.75rem] gap-2 bg-zinc-900/40 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 border-b border-zinc-850 md:grid">
             <span>Object Key</span>
             <span>Size</span>
             <span>Uploaded On</span>
-            <span>Actions</span>
+            <span className="text-right">Actions</span>
           </div>
 
           {isLoading ? (

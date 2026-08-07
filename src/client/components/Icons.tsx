@@ -1,4 +1,4 @@
-import { SVGProps } from "react";
+import type { HTMLAttributes, SVGProps } from "react";
 
 export function CopyIcon(props: SVGProps<SVGSVGElement>) {
   return (
@@ -97,11 +97,14 @@ export function ServerIcon(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function GlobeIcon(props: SVGProps<SVGSVGElement>) {
+/** Hugeicons stroke-rounded globe (`hgi-globe`). Requires the free icon font CDN in `index.html`. */
+export function GlobeIcon({ className = "", ...props }: HTMLAttributes<HTMLElement>) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="size-5" {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9s2.015-9 4.5-9m0 18c-1.18 0-2.062-3.125-2.234-6.747m0 0h8.468m-8.468 0a9.004 9.004 0 0 1 8.716-6.747M12 3a9.004 9.004 0 0 1 8.716 6.747M12 3a9.004 9.004 0 0 0-8.716 6.747M12 9.75h.008v.008H12v-.008ZM12 14.25h.008v.008H12v-.008Z" />
-    </svg>
+    <i
+      className={["hgi", "hgi-stroke", "hgi-rounded", "hgi-globe", className].filter(Boolean).join(" ")}
+      aria-hidden="true"
+      {...props}
+    />
   );
 }
 
