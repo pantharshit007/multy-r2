@@ -45,9 +45,8 @@ export function ObjectRow({
     }
   }
 
-  // Prefer keys ending in "/"; also catch zero-byte placeholders whose trailing
-  // slash was stripped by non-strict Worker routing (see isFolderObject).
-  const isFolder = isFolderObject(object.key, object.size);
+  // Prefer API `isFolder` / directory content-type / trailing-slash keys.
+  const isFolder = isFolderObject(object);
   const extension = object.key.split(".").pop()?.toLowerCase() || "";
   const isImage = !isFolder && ["jpg", "jpeg", "png", "gif", "webp", "svg", "ico"].includes(extension);
   const isCode = !isFolder && ["json", "txt", "js", "ts", "html", "css", "md", "sh", "yml", "yaml"].includes(extension);

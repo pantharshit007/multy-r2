@@ -1,3 +1,5 @@
+import { FOLDER_CONTENT_TYPE } from "../constants";
+
 export function encodeKey(key: string): string {
   return key.split("/").map(encodeURIComponent).join("/");
 }
@@ -14,18 +16,25 @@ export function sanitizeFolder(value: string): string {
   return folder;
 }
 
+export function isDirectoryContentType(contentType: string | null | undefined): boolean {
+  if (!contentType) return false;
+  return contentType.split(";")[0].trim().toLowerCase() === FOLDER_CONTENT_TYPE;
+}
+
 /**
  * Whether a listed object should be treated as a folder placeholder.
  *
- * Canonical keys end with `/` (e.g. `temp/`). Hono's non-strict routing can
- * strip that trailing slash on PUT, so we also treat zero-byte keys whose
- * last segment has no file extension as folders (legacy / stripped keys).
+ * Prefer explicit `isFolder` from the API. Otherwise: key ends with `/`, or
+ * Content-Type is `application/x-directory` (set when creating folders). Do
+ * not guess from zero-byte extensionless names — that mislabels files like
+ * `README`.
  */
-export function isFolderObject(key: string, size = 0): boolean {
-  if (key.endsWith("/")) return true;
-  if (size !== 0) return false;
-  const base = key.split("/").filter(Boolean).pop() ?? "";
-  if (!base) return false;
-  // "temp", "new/" basename → folder; "hi.txt", "pfp.webp" → file
-  return !base.includes(".");
+export function isFolderObject(input: {
+  key: string;
+  isFolder?: boolean | null;
+  contentType?: string | null;
+}): boolean {
+  if (typeof input.isFolder === "boolean") return input.isFolder;
+  if (input.key.endsWith("/")) return true;
+  return isDirectoryContentType(input.contentType);
 }

@@ -1,4 +1,5 @@
 import { FOLDER_CONTENT_TYPE } from "../../shared/constants";
+import { isDirectoryContentType } from "../../shared/utils/objectKeys";
 import { HEALTH_CHECK_MESSAGE } from "../constants";
 import { ApiError } from "../errors";
 import { getEndpointBucketBinding, getSelectedEndpointBucket, listEndpointBucketBindings } from "../services/r2Buckets";
@@ -27,9 +28,23 @@ export function healthCheckHandler(c: AppContext): Response {
 
 export async function listObjectsHandler(c: AppContext): Promise<Response> {
   const bucket = resolveBucket(c);
-  const listed = await bucket.list({ cursor: c.req.query("cursor") ?? undefined });
+  const listed = await bucket.list({
+    cursor: c.req.query("cursor") ?? undefined,
+    include: ["httpMetadata"],
+  });
   return c.json({
-    objects: listed.objects,
+    objects: listed.objects.map((object) => {
+      const contentType = object.httpMetadata?.contentType ?? null;
+      return {
+        key: object.key,
+        size: object.size,
+        uploaded: object.uploaded,
+        etag: object.etag,
+        httpEtag: object.httpEtag,
+        contentType,
+        isFolder: object.key.endsWith("/") || isDirectoryContentType(contentType),
+      };
+    }),
     truncated: listed.truncated,
     cursor: listed.truncated ? listed.cursor : undefined,
   });
