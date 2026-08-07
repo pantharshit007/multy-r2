@@ -163,7 +163,9 @@ export function DashboardPage() {
           <label className="grid gap-1.5 text-xs font-semibold text-zinc-400">
             <span>Workers Endpoint</span>
             <div className="relative">
-              <ServerIcon className="absolute left-3 top-3.5 size-4 text-zinc-600" />
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-zinc-600">
+                <ServerIcon className="size-4" />
+              </span>
               <input
                 className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
                 value={form.endPoint}

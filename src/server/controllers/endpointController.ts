@@ -1,3 +1,4 @@
+import { FOLDER_CONTENT_TYPE } from "../../shared/constants";
 import { HEALTH_CHECK_MESSAGE } from "../constants";
 import { ApiError } from "../errors";
 import { getEndpointBucketBinding, getSelectedEndpointBucket, listEndpointBucketBindings } from "../services/r2Buckets";
@@ -87,10 +88,19 @@ export async function getPublicAliasHandler(c: AppContext): Promise<Response> {
 
 export async function putObjectHandler(c: AppContext): Promise<Response> {
   const bucket = resolveBucket(c);
-  const key = objectKeyParam(c);
+  let key = objectKeyParam(c);
+  const contentType = c.req.header("content-type") ?? guessContentTypeFromKey(key);
+
+  // Hono non-strict routing strips a trailing `/` from path params. Folder
+  // placeholders are stored as keys ending in `/` so restore it when the
+  // client sends the directory content type (see createEndpointFolder).
+  if (contentType.split(";")[0].trim().toLowerCase() === FOLDER_CONTENT_TYPE && !key.endsWith("/")) {
+    key = `${key}/`;
+  }
+
   await bucket.put(key, c.req.raw.body, {
     httpMetadata: {
-      contentType: c.req.header("content-type") ?? guessContentTypeFromKey(key),
+      contentType,
     },
   });
   return c.text("Done");

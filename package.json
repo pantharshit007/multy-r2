@@ -23,9 +23,11 @@
 	"dependencies": {
 		"@tanstack/react-router": "1.170.10",
 		"@vitejs/plugin-react": "6.0.2",
+		"clsx": "2.1.1",
 		"hono": "4.12.27",
 		"react": "19.2.6",
 		"react-dom": "19.2.6",
+		"tailwind-merge": "3.3.1",
 		"vite": "8.0.14"
 	},
 	"devDependencies": {

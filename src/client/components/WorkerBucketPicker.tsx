@@ -114,7 +114,9 @@ export function WorkerBucketPicker({
           </div>
 
           <div className="relative">
-            <BucketIcon className="absolute left-3 top-3.5 size-4.5 text-zinc-600 pointer-events-none" />
+            <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-zinc-600">
+              <BucketIcon className="size-4.5" />
+            </span>
             <select
               className="h-11 w-full appearance-none rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-10 text-sm text-zinc-50 outline-none focus:border-amber-300/80 transition-all cursor-pointer"
               value={selectedBucketId}

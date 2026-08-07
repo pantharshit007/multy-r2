@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { EndpointRecord, R2ObjectSummary } from "../../shared";
+import { isFolderObject } from "../../shared/utils/objectKeys";
 import { publicUrlFor } from "../api";
 import { formatBytes } from "../utils/format";
 import { CopyIcon, CheckIcon, ExternalLinkIcon, TrashIcon, ImageIcon, CodeIcon, FileIcon, FolderIcon } from "./Icons";
@@ -44,8 +45,9 @@ export function ObjectRow({
     }
   }
 
-  // Folder placeholders are written as keys ending with "/".
-  const isFolder = object.key.endsWith("/");
+  // Prefer keys ending in "/"; also catch zero-byte placeholders whose trailing
+  // slash was stripped by non-strict Worker routing (see isFolderObject).
+  const isFolder = isFolderObject(object.key, object.size);
   const extension = object.key.split(".").pop()?.toLowerCase() || "";
   const isImage = !isFolder && ["jpg", "jpeg", "png", "gif", "webp", "svg", "ico"].includes(extension);
   const isCode = !isFolder && ["json", "txt", "js", "ts", "html", "css", "md", "sh", "yml", "yaml"].includes(extension);
