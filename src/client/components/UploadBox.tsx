@@ -133,6 +133,7 @@ export function UploadBox({
       onError(null);
       try {
         const result = await createEndpointFolder(record, folder);
+        setFolder("");
         onStatus(`Created folder ${result.key}`);
         onDone();
       } catch (cause) {

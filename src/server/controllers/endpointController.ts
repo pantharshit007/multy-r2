@@ -16,7 +16,14 @@ function resolveBucket(c: AppContext): R2Bucket {
   return getSelectedEndpointBucket(c.env, c.req.param("bindingName") ?? null);
 }
 
-const objectKeyParam = (c: AppContext): string => sanitizeObjectKey(c.req.param("key") ?? "");
+function objectKeyParam(c: AppContext): string {
+  const key = sanitizeObjectKey(c.req.param("key") ?? "");
+
+  // Hono's non-strict router removes a trailing slash from `:key`, but it is
+  // meaningful for R2 folder placeholders. Preserve it for every object
+  // operation so GET, HEAD, PUT, and DELETE target the same key.
+  return new URL(c.req.url).pathname.endsWith("/") && !key.endsWith("/") ? `${key}/` : key;
+}
 
 export async function listBindingsHandler(c: AppContext): Promise<Response> {
   return c.json(await listEndpointBucketBindings(c.env));
@@ -106,9 +113,8 @@ export async function putObjectHandler(c: AppContext): Promise<Response> {
   let key = objectKeyParam(c);
   const contentType = c.req.header("content-type") ?? guessContentTypeFromKey(key);
 
-  // Hono non-strict routing strips a trailing `/` from path params. Folder
-  // placeholders are stored as keys ending in `/` so restore it when the
-  // client sends the directory content type (see createEndpointFolder).
+  // Folder clients may use a normalized URL that loses the final slash. Keep
+  // the content type as a fallback so placeholders are still stored correctly.
   if (contentType.split(";")[0].trim().toLowerCase() === FOLDER_CONTENT_TYPE && !key.endsWith("/")) {
     key = `${key}/`;
   }

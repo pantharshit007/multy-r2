@@ -10,7 +10,9 @@ import { UploadBox } from "../components/UploadBox";
 import { ObjectRow } from "../components/ObjectRow";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { FileSkeleton } from "../components/FileSkeleton";
+import { DeleteObjectDialog } from "../components/DeleteObjectDialog";
 import { RefreshIcon, ArrowLeftIcon } from "../components/Icons";
+import { REFRESH_FEEDBACK_MIN_MS } from "../constants";
 
 export function EndpointPage() {
   const { bucketId } = useParams({ from: "/buckets/$bucketId" });
@@ -20,8 +22,10 @@ export function EndpointPage() {
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [uploadLogReset, setUploadLogReset] = useState(0);
+  const [objectPendingDeletion, setObjectPendingDeletion] = useState<R2ObjectSummary | null>(null);
 
   useEffect(() => {
     const next = findRecord(bucketId);
@@ -62,6 +66,41 @@ export function EndpointPage() {
     const response = await listEndpointObjects(record, cursor);
     setObjects((current) => [...current, ...response.objects]);
     setCursor(response.cursor);
+  }
+
+  async function refreshList() {
+    setStatus(null);
+    setUploadLogReset((current) => current + 1);
+    setIsRefreshing(true);
+    const startedAt = Date.now();
+    try {
+      await refreshObjects();
+    } finally {
+      const elapsed = Date.now() - startedAt;
+      const remaining = REFRESH_FEEDBACK_MIN_MS - elapsed;
+      if (remaining > 0) {
+        await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+      setIsRefreshing(false);
+    }
+  }
+
+  function confirmDelete() {
+    if (!record || !objectPendingDeletion) return;
+
+    const object = objectPendingDeletion;
+    startTransition(async () => {
+      setError(null);
+      setStatus(null);
+      try {
+        await deleteEndpointObject(record, object.key);
+        setObjects((current) => current.filter((item) => item.key !== object.key));
+        setObjectPendingDeletion(null);
+        setStatus(`Deleted object "${object.key}" successfully.`);
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Could not delete object");
+      }
+    });
   }
 
   if (!record) {
@@ -123,17 +162,25 @@ export function EndpointPage() {
             <h2 className="mt-0.5 text-2xl font-bold tracking-tight text-zinc-50 font-display">Files Directory</h2>
           </div>
           <button
-            className="flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/40 px-3.5 py-2 text-xs font-semibold text-zinc-300 hover:border-amber-300 hover:text-amber-200 hover:bg-amber-300/5 transition-all group"
-            onClick={() => {
-              setStatus(null);
-              setUploadLogReset((current) => current + 1);
-              runAction(() => refreshObjects());
-            }}
+            className={`group flex items-center gap-2 rounded-xl border px-3.5 py-2 text-xs font-semibold transition-all disabled:cursor-not-allowed ${
+              isRefreshing
+                ? "border-amber-300/60 bg-amber-300/10 text-amber-200 shadow-[0_0_18px_rgba(252,211,77,0.12)]"
+                : "border-zinc-700 bg-zinc-900/40 text-zinc-300 hover:border-amber-300 hover:text-amber-200 hover:bg-amber-300/5"
+            }`}
+            onClick={() => void refreshList()}
             type="button"
-            disabled={isPending}
+            disabled={isPending || isRefreshing}
+            aria-busy={isRefreshing}
+            aria-live="polite"
           >
-            <RefreshIcon className="size-3.5 group-hover:rotate-180 transition-transform duration-500" />
-            <span>Refresh list</span>
+            <RefreshIcon
+              className={`size-3.5 ${
+                isRefreshing
+                  ? "animate-spin"
+                  : "transition-transform duration-500 group-hover:rotate-180"
+              }`}
+            />
+            <span>{isRefreshing ? "Refreshing…" : "Refresh list"}</span>
           </button>
         </div>
 
@@ -186,11 +233,7 @@ export function EndpointPage() {
                   object={object}
                   onError={setError}
                   onStatus={setStatus}
-                  onDelete={() => runAction(async () => {
-                    await deleteEndpointObject(record, object.key);
-                    setObjects((current) => current.filter((item) => item.key !== object.key));
-                    setStatus(`Deleted object "${object.key}" successfully.`);
-                  })}
+                  onDelete={() => setObjectPendingDeletion(object)}
                 />
               ))}
             </div>
@@ -223,6 +266,12 @@ export function EndpointPage() {
         }}
         onError={setError}
         onStatus={setStatus}
+      />
+      <DeleteObjectDialog
+        objectKey={objectPendingDeletion?.key ?? null}
+        isDeleting={isPending}
+        onCancel={() => setObjectPendingDeletion(null)}
+        onConfirm={confirmDelete}
       />
     </main>
   );

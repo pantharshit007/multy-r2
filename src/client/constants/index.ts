@@ -4,6 +4,8 @@ export const BUCKET_PICKER_DEBOUNCE_MS = 250;
 export const MAX_UPLOAD_HISTORY_ENTRIES = 6;
 export const EMPTY_API_BASE = "";
 export const SETTINGS_SAVED_FEEDBACK_MS = 2000;
+/** Minimum time the refresh button stays in its loading state so the spinner is visible. */
+export const REFRESH_FEEDBACK_MIN_MS = 500;
 
 export const SETUP_GUIDE_PATH = "/setup-guide";
 export const GITHUB_REPO_SLUG = "pantharshit007/multy-r2";
