@@ -1,108 +1,76 @@
 # Multy R2
 
-Personal Cloudflare R2 dashboard built with Vite, React, TanStack Router, Tailwind CSS v4, Cloudflare Pages (client), and Cloudflare Workers (API).
+Personal multi-endpoint Cloudflare R2 dashboard. Client (Pages) and server (Worker) deploy independently — point the shared UI at any compatible Worker via URL + API key.
 
 ## Architecture
 
-Client and server deploy independently:
-
 | Piece | Host | Role |
 | --- | --- | --- |
-| Client | Cloudflare Pages | Shared SPA; endpoint records in localStorage |
+| Client | Cloudflare Pages | SPA; endpoint records in localStorage |
 | Server | Cloudflare Worker | R2 object API, admin API, public `/cdn` aliases |
 
-Point the client at any compatible Worker (yours or others) via endpoint URL + API key. The Worker does not serve the UI bundle.
+Each endpoint record stores `endPoint`, `apiKey`, and optional `customDomain`. The UI sends `apiKey` as `x-api-key` to that Worker only. Multiple Workers are supported; no binding config is required in the endpoint form.
 
-## What is implemented
+## Features
 
-- Endpoint records stored in localStorage.
-- Each record stores `endPoint`, `apiKey`, and optional `customDomain`.
-- Object listing, upload, delete, and public URL copy against the selected endpoint.
-- The saved endpoint API key is sent as `x-api-key` for that endpoint only.
-- No Worker binding is required when adding an endpoint record.
-- Multiple Worker endpoints are supported. Each endpoint has its own URL, API key, and custom domain.
+- List, upload, and delete objects on a selected Worker endpoint
+- Multi-bucket support via R2 bindings (`/api/r2/bucket/:binding/...`)
+- Public share URLs via Worker `/cdn/...` aliases
+- Optional custom domain for generated public links
+- In-app setup guide at `/setup-guide`
 
-## Local Setup
+## Local development
 
-1. Install dependencies: `pnpm install`
-2. Run the UI: `pnpm dev`
-3. Add one or more Multy R2 Worker endpoints in the UI (see [docs/api.md](docs/api.md)).
-4. Use each endpoint Worker API key in that endpoint's API key field.
+```bash
+pnpm install
+pnpm dev      # UI (Vite)
+pnpm wr:dev   # Worker (needs R2 binding + secrets)
+```
 
-## Local Worker Test
+### Local Worker endpoint
 
-Use this when testing the Worker in this repo as an endpoint.
+1. Bind a bucket as `R2_BUCKET` or `BUCKET_A` in `wrangler.jsonc`.
+2. Set `AUTH_KEY_SECRET` (and `PRIVATE_LINK_SECRET` if using private links) in `.dev.vars`.
+3. Run `pnpm wr:dev` and `pnpm dev`.
+4. In the UI, add endpoint `http://localhost:8787` with API key matching `AUTH_KEY_SECRET`.
 
-1. In `wrangler.jsonc`, bind your bucket as `R2_BUCKET` or `BUCKET_A`.
-2. In `.dev.vars`, set `AUTH_KEY_SECRET` and `PRIVATE_LINK_SECRET` for local testing.
-3. Start the Worker endpoint: `pnpm wr:dev`
-4. Start the UI in another terminal: `pnpm dev`
-5. In the UI, add endpoint `http://localhost:8787`.
-6. In the UI, set API key to the same value as `.dev.vars` `AUTH_KEY_SECRET`.
-7. Open that endpoint in the UI and use upload/list/delete.
+Binding names are the identifiers used in multi-bucket URLs. Friendly labels come from `wrangler.jsonc` at build time (`pnpm gen:bindings`). Prefer `UPPER_SNAKE_CASE` names.
 
-`AUTH_KEY_SECRET` and `PRIVATE_LINK_SECRET` belong to the Worker endpoint, not the browser. For local testing, `.dev.vars` gives the local Worker those secrets, and the UI stores the endpoint API key in localStorage so it can send `x-api-key`.
+## Deploy
 
-### Naming R2 bindings
+**Worker**
 
-When you add an R2 bucket binding (in `wrangler.jsonc` or the Cloudflare dashboard) you set two things:
+```bash
+# Configure R2 + D1 in wrangler.jsonc
+# Set secrets: AUTH_KEY_SECRET, PRIVATE_LINK_SECRET
+pnpm deploy:worker
+```
 
-- **Variable name** = the binding name exposed on `env` (e.g. `BUCKET_A`). You choose this; it appears in multi-bucket share URLs (`/cdn/<binding>/<key>`), while single-bucket mode uses `/cdn/<key>`.
-- **Bucket** = the real R2 bucket the binding points to (e.g. `shottr-bucket`).
+**Pages**
 
-The two are independent, and the runtime binding does not expose its bucket name. This app reads the friendly bucket name from `wrangler.jsonc` at build time (`pnpm gen:bindings`) to label the UI dropdown; a binding added only via the dashboard still works but shows its variable name until added to `wrangler.jsonc` and rebuilt.
+```bash
+pnpm deploy:pages   # builds client, deploys dist/ as project multy-r2
+```
 
-**Recommended:** name bindings in `UPPER_SNAKE_CASE` (`BUCKET_A`, `THUMBNAILS`). The app accepts any name matching `^[A-Za-z_][A-Za-z0-9_-]*$` (letters, digits, `_`, `-`), but the Cloudflare dashboard and `wrangler deploy` conventionally expect identifier-style names, so hyphenated names like `my-super-bucket` may not be portable to production even though they run in local `wrangler dev`.
+Or connect the repo in Cloudflare Pages: build command `pnpm build:client`, output directory `dist`.
 
-For deployed Workers, use Wrangler secrets instead of committing secret values to `wrangler.jsonc`. The config declares the required secret names, and `wrangler deploy` will fail if they are missing.
+### Worker bundle (shared UI users)
 
-## Deployment
+Paste the multi-bucket Worker from the rolling [worker](https://github.com/pantharshit007/multy-r2/releases/tag/worker) release, bind R2 + secrets, then add the Worker URL and API key in the UI. Full walkthrough: `/setup-guide` in the app.
 
-Deploy the Worker and the Pages app separately. The client is shared; each user (or account) runs their own Worker with R2 bindings, domain, and API keys.
+- Raw: https://raw.githubusercontent.com/pantharshit007/multy-r2/release-worker-js/worker.js
+- Local build: `pnpm build:worker-bundle` → `dist-worker/index.js` (do not deploy the Vite SPA `dist/` as a Worker)
 
-### Worker (API)
+## API
 
-1. Configure R2 bindings and D1 in `wrangler.jsonc`.
-2. Set secrets: `AUTH_KEY_SECRET`, `PRIVATE_LINK_SECRET`.
-3. Deploy: `pnpm deploy:worker` (or `wrangler deploy` after `pnpm gen:bindings`).
+Full Worker route reference: [docs/api.md](docs/api.md).
 
-### Client (Pages)
+- `apiKey` is the Worker secret; the UI stores it in localStorage and sends `x-api-key`.
+- `customDomain` is only for generated public URLs; if empty, public URLs use `endPoint`.
+- Public aliases live on the Worker (`/cdn/...`), not on Pages.
 
-1. Build: `pnpm build:client` (writes to `dist/`).
-2. Deploy: `pnpm deploy:pages` (uses Wrangler Pages + project name `multy-r2`).
-3. Or connect the GitHub repo in Cloudflare Pages with build command `pnpm build:client` and output directory `dist`.
+## Credits
 
-After deploy, open the Pages URL and add Worker endpoint URLs + API keys in the UI. CORS on the Worker already allows browser origins (`origin: *`).
+Original idea and inspiration: [R2 Uploader](https://github.com/jw-12138/r2-uploader) by [jw-12138](https://github.com/jw-12138) — browser-based R2 management with API-key auth.
 
-### Option: GitHub Actions (Worker)
-
-This repo includes an opt-in workflow file at `.github/workflows/deploy-cloudflare.yml.disabled`.
-
-1. Rename it to `.github/workflows/deploy-cloudflare.yml` if you want GitHub Actions deploys.
-2. Add `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` as GitHub repo secrets.
-3. Set `WORKER_DEPLOY_ENABLED` to `true` in the workflow or repository variables if you want the job to run.
-4. Push to `main` to deploy the Worker only (not Pages).
-
-## Setup guide (users)
-
-In-app guide: open `/setup-guide` on the deployed Pages UI (or local `pnpm dev`).
-
-**How users should get the Worker:**
-
-1. **Recommended:** paste Multy’s multi-bucket Worker bundle from the rolling GitHub Release tag `worker` (published on every push to `main` via `.github/workflows/release-worker-bundle.yml`):
-   - Release: https://github.com/pantharshit007/multy-r2/releases/tag/worker
-   - View / copy (raw): https://raw.githubusercontent.com/pantharshit007/multy-r2/release-worker-js/worker.js
-   - Download: https://github.com/pantharshit007/multy-r2/releases/download/worker/worker.js
-   - Open the raw URL → select all → copy → paste into Workers → Edit code, bind R2 + secrets (type **Secret**), then add Worker URL + API key in the shared UI.
-2. **CLI:** clone/fork → edit `wrangler.jsonc` → set secrets → `pnpm deploy:worker`.
-3. **Full ownership:** fork and deploy both Worker (`pnpm deploy:worker`) and Pages (`pnpm deploy:pages`).
-
-Local bundle: `pnpm build:worker-bundle` → `dist-worker/index.js`. Do not ship the Vite SPA `dist/` as a Worker — it has no R2 bindings.
-
-## Notes
-
-- Full Worker route reference: [docs/api.md](docs/api.md).
-- `apiKey` is the endpoint Worker secret. The UI stores it in localStorage and sends it as `x-api-key`.
-- `customDomain` is used only for generated public URLs. If empty, public URLs use `endPoint`.
-- `wrangler.jsonc` bucket/D1 values do not create UI records. Add endpoints in the UI because endpoint records live in browser localStorage.
-- Public object aliases stay on the Worker at `/cdn/...`; they are not part of the Pages app.
+When I was looking a way to manage my R2 his worked came in first, but I find it hard to use with multiple bucket setup (you have to spin separate worker for each) and UI was not upto my liking, Understandable. So, that's why I created **Multy**.
