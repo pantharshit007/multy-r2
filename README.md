@@ -41,9 +41,11 @@ Binding names are the identifiers used in multi-bucket URLs. Friendly labels com
 **Worker**
 
 ```bash
-# Configure R2 + D1 in wrangler.jsonc
-# Set secrets: AUTH_KEY_SECRET, PRIVATE_LINK_SECRET
+# Configure R2 bindings in wrangler.jsonc
+# Optional: D1 control plane — binding name must be DB; then apply migrations
+# Secrets: AUTH_KEY_SECRET (required); PRIVATE_LINK_SECRET if using private links
 pnpm deploy:worker
+pnpm migrate:deploy   # only when D1 admin/control-plane routes are enabled
 ```
 
 **Pages**
@@ -73,4 +75,4 @@ Full Worker route reference: [docs/api.md](docs/api.md).
 
 Original idea and inspiration: [R2 Uploader](https://github.com/jw-12138/r2-uploader) by [jw-12138](https://github.com/jw-12138) — browser-based R2 management with API-key auth.
 
-When I was looking a way to manage my R2 his worked came in first, but I find it hard to use with multiple bucket setup (you have to spin separate worker for each) and UI was not upto my liking, Understandable. So, that's why I created **Multy**.
+**Multy** was created to manage multiple R2 buckets more easily. Tools like R2 Uploader work well for a single endpoint, but multi-bucket setups typically need a separate Worker per bucket, and the UI did not fit my needs.
