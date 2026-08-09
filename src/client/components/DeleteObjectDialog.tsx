@@ -8,20 +8,61 @@ interface DeleteObjectDialogProps {
   onConfirm: () => void;
 }
 
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function DeleteObjectDialog({ objectKey, isDeleting, onCancel, onConfirm }: DeleteObjectDialogProps) {
+  const dialogRef = useRef<HTMLElement>(null);
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const isDeletingRef = useRef(isDeleting);
+  isDeletingRef.current = isDeleting;
 
   useEffect(() => {
     if (!objectKey) return;
+
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     cancelButtonRef.current?.focus();
 
+    function getFocusableElements(): HTMLElement[] {
+      if (!dialogRef.current) return [];
+      return Array.from(dialogRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+    }
+
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape" && !isDeleting) onCancel();
+      if (event.key === "Escape" && !isDeletingRef.current) {
+        onCancel();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusable = getFocusableElements();
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+
+      if (event.shiftKey) {
+        if (active === first || !dialogRef.current?.contains(active)) {
+          event.preventDefault();
+          last.focus();
+        }
+      } else if (active === last || !dialogRef.current?.contains(active)) {
+        event.preventDefault();
+        first.focus();
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isDeleting, objectKey, onCancel]);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocused?.focus();
+    };
+  }, [objectKey, onCancel]);
 
   if (!objectKey) return null;
 
@@ -30,11 +71,13 @@ export function DeleteObjectDialog({ objectKey, isDeleting, onCancel, onConfirm 
       <button
         className="absolute inset-0 cursor-default bg-zinc-950/75 backdrop-blur-sm"
         type="button"
+        tabIndex={-1}
         aria-label="Close deletion confirmation"
         disabled={isDeleting}
         onClick={onCancel}
       />
       <section
+        ref={dialogRef}
         className="relative w-full max-w-md animate-fade-in-up overflow-hidden rounded-3xl border border-red-500/25 bg-zinc-950 p-6 shadow-2xl shadow-black/50"
         role="alertdialog"
         aria-modal="true"

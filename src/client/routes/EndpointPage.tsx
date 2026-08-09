@@ -62,7 +62,7 @@ export function EndpointPage() {
   }
 
   async function loadMore() {
-    if (!record || !cursor) return;
+    if (!record || !cursor || isRefreshing) return;
     const response = await listEndpointObjects(record, cursor);
     setObjects((current) => [...current, ...response.objects]);
     setCursor(response.cursor);
@@ -243,10 +243,10 @@ export function EndpointPage() {
         {/* Pagination */}
         {cursor ? (
           <button
-            className="mt-4 h-10 w-full rounded-xl border border-zinc-700 bg-zinc-900/30 text-xs font-semibold text-zinc-300 hover:border-amber-300 hover:text-amber-200 hover:bg-amber-300/5 transition-all"
+            className="mt-4 h-10 w-full rounded-xl border border-zinc-700 bg-zinc-900/30 text-xs font-semibold text-zinc-300 hover:border-amber-300 hover:text-amber-200 hover:bg-amber-300/5 transition-all disabled:cursor-not-allowed disabled:opacity-50"
             onClick={() => runAction(loadMore)}
             type="button"
-            disabled={isPending}
+            disabled={isPending || isRefreshing}
           >
             Load more objects
           </button>
