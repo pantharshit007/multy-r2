@@ -2,7 +2,7 @@ import { createRootRoute, createRoute, createRouter, Link, Outlet } from "@tanst
 import { EndpointPage } from "./routes/EndpointPage";
 import { DashboardPage } from "./routes/DashboardPage";
 import { SetupGuidePage } from "./routes/SetupGuidePage";
-import { HelpIcon } from "./components/Icons";
+import { HelpIcon, MoonIcon, SunIcon } from "./components/Icons";
 
 import { useEffect, useState } from "react";
 
@@ -52,13 +52,9 @@ function RootLayout() {
             type="button"
           >
             {theme === "light" ? (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="size-4.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.72 9.72 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z" />
-              </svg>
+              <MoonIcon className="size-4.5" />
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="size-4.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m0 13.5V21m8.94-8.94h-2.25M4.125 12h-2.25m15.03-7.03-1.591 1.591M4.903 17.589l-1.591 1.591m12.94 0 1.591-1.591M4.903 4.903 6.494 6.494M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-              </svg>
+              <SunIcon className="size-4.5" />
             )}
           </button>
         </div>

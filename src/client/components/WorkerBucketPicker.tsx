@@ -91,6 +91,8 @@ export function WorkerBucketPicker({
 
   const selectedBucketId = buckets.find((bucket) => bucket.id === bucketId || bucket.bindingName === bucketBindingName)?.id ?? "";
   const activeBucket = buckets.find((bucket) => bucket.id === selectedBucketId) ?? null;
+  const activeDomain = activeBucket ? (bucketDomains[activeBucket.bindingName] ?? "").trim() : "";
+  const domainMissing = Boolean(activeBucket && !activeDomain);
 
   return (
     <div className="rounded-2xl border border-zinc-800 bg-zinc-900/10 p-4">
@@ -112,7 +114,9 @@ export function WorkerBucketPicker({
           </div>
 
           <div className="relative">
-            <BucketIcon className="absolute left-3 top-3.5 size-4.5 text-zinc-600 pointer-events-none" />
+            <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-zinc-600">
+              <BucketIcon className="size-4.5" />
+            </span>
             <select
               className="h-11 w-full appearance-none rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-10 text-sm text-zinc-50 outline-none focus:border-amber-300/80 transition-all cursor-pointer"
               value={selectedBucketId}
@@ -129,7 +133,7 @@ export function WorkerBucketPicker({
                 </option>
               ))}
             </select>
-            <ChevronDownIcon className="absolute right-3 top-3.5 size-4.5 text-zinc-500 pointer-events-none" />
+            <ChevronDownIcon className="absolute right-3 top-3.5 size-4.5 pointer-events-none" />
           </div>
 
           {error ? <div className="rounded-xl border border-red-900/40 bg-red-950/20 p-3 text-xs text-red-300">{error}</div> : null}
@@ -142,9 +146,18 @@ export function WorkerBucketPicker({
 
           {activeBucket ? (
             <div className="grid gap-1.5 border-t border-zinc-850 pt-3">
-              <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Domain for {activeBucket.name}</span>
+              <span
+                className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                  domainMissing ? "text-red-400" : "text-zinc-500"
+                }`}
+              >
+                Domain for {activeBucket.name}
+                {domainMissing ? " — not assigned" : ""}
+              </span>
               <div className="relative">
-                <GlobeIcon className="absolute left-3 top-3.5 size-4 text-zinc-600" />
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-zinc-600">
+                  <GlobeIcon className="size-4" />
+                </span>
                 <input
                   className="h-11 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9.5 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
                   placeholder="https://cdn.example.com"

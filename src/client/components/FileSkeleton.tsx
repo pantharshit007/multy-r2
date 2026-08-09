@@ -5,7 +5,7 @@ export function FileSkeleton() {
       {rows.map((_, index) => (
         <div
           key={index}
-          className="grid gap-2 px-4 py-4 md:grid-cols-[1fr_90px_190px_230px] md:items-center"
+          className="grid gap-2 px-4 py-4 md:grid-cols-[minmax(0,1fr)_4.5rem_9.5rem_6.75rem] md:items-center"
         >
           {/* Key name skeleton */}
           <div className="flex items-center gap-3 min-w-0">
@@ -28,14 +28,14 @@ export function FileSkeleton() {
           </div>
 
           {/* Actions button skeleton */}
-          <div className="flex gap-2">
-            <div className="relative h-7 w-16 overflow-hidden rounded bg-zinc-900 border border-zinc-800">
+          <div className="flex items-center justify-end gap-1.5">
+            <div className="relative size-8 overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800">
               <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
             </div>
-            <div className="relative h-7 w-14 overflow-hidden rounded bg-zinc-900 border border-zinc-800">
+            <div className="relative size-8 overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800">
               <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
             </div>
-            <div className="relative h-7 w-16 overflow-hidden rounded bg-zinc-900 border border-zinc-800">
+            <div className="relative size-8 overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800">
               <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
             </div>
           </div>

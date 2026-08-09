@@ -1,3 +1,5 @@
+import { FOLDER_CONTENT_TYPE } from "../../shared/constants";
+import { isDirectoryContentType } from "../../shared/utils/objectKeys";
 import { HEALTH_CHECK_MESSAGE } from "../constants";
 import { ApiError } from "../errors";
 import { getEndpointBucketBinding, getSelectedEndpointBucket, listEndpointBucketBindings } from "../services/r2Buckets";
@@ -14,7 +16,14 @@ function resolveBucket(c: AppContext): R2Bucket {
   return getSelectedEndpointBucket(c.env, c.req.param("bindingName") ?? null);
 }
 
-const objectKeyParam = (c: AppContext): string => sanitizeObjectKey(c.req.param("key") ?? "");
+function objectKeyParam(c: AppContext): string {
+  const key = sanitizeObjectKey(c.req.param("key") ?? "");
+
+  // Hono's non-strict router removes a trailing slash from `:key`, but it is
+  // meaningful for R2 folder placeholders. Preserve it for every object
+  // operation so GET, HEAD, PUT, and DELETE target the same key.
+  return new URL(c.req.url).pathname.endsWith("/") && !key.endsWith("/") ? `${key}/` : key;
+}
 
 export async function listBindingsHandler(c: AppContext): Promise<Response> {
   return c.json(await listEndpointBucketBindings(c.env));
@@ -26,9 +35,23 @@ export function healthCheckHandler(c: AppContext): Response {
 
 export async function listObjectsHandler(c: AppContext): Promise<Response> {
   const bucket = resolveBucket(c);
-  const listed = await bucket.list({ cursor: c.req.query("cursor") ?? undefined });
+  const listed = await bucket.list({
+    cursor: c.req.query("cursor") ?? undefined,
+    include: ["httpMetadata"],
+  });
   return c.json({
-    objects: listed.objects,
+    objects: listed.objects.map((object) => {
+      const contentType = object.httpMetadata?.contentType ?? null;
+      return {
+        key: object.key,
+        size: object.size,
+        uploaded: object.uploaded,
+        etag: object.etag,
+        httpEtag: object.httpEtag,
+        contentType,
+        isFolder: object.key.endsWith("/") || isDirectoryContentType(contentType),
+      };
+    }),
     truncated: listed.truncated,
     cursor: listed.truncated ? listed.cursor : undefined,
   });
@@ -87,10 +110,18 @@ export async function getPublicAliasHandler(c: AppContext): Promise<Response> {
 
 export async function putObjectHandler(c: AppContext): Promise<Response> {
   const bucket = resolveBucket(c);
-  const key = objectKeyParam(c);
+  let key = objectKeyParam(c);
+  const contentType = c.req.header("content-type") ?? guessContentTypeFromKey(key);
+
+  // Folder clients may use a normalized URL that loses the final slash. Keep
+  // the content type as a fallback so placeholders are still stored correctly.
+  if (contentType.split(";")[0].trim().toLowerCase() === FOLDER_CONTENT_TYPE && !key.endsWith("/")) {
+    key = `${key}/`;
+  }
+
   await bucket.put(key, c.req.raw.body, {
     httpMetadata: {
-      contentType: c.req.header("content-type") ?? guessContentTypeFromKey(key),
+      contentType,
     },
   });
   return c.text("Done");

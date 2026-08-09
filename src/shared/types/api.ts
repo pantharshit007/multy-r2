@@ -4,6 +4,10 @@ export interface R2ObjectSummary {
   uploaded: string | null;
   etag: string;
   publicUrl: string | null;
+  /** True when this key is a folder placeholder (`…/` or directory content-type). */
+  isFolder: boolean;
+  /** Object Content-Type when known from list metadata; null if omitted. */
+  contentType: string | null;
 }
 
 export interface ObjectListResponse {

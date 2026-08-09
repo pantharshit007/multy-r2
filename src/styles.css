@@ -42,6 +42,9 @@
   /* Remap Amber accent colors dynamically */
   --color-amber-200: var(--amber-200);
   --color-amber-300: var(--amber-300);
+
+  /* Icon stroke accent: amber in dark, zinc in light (see --icon-accent below). */
+  --color-icon-accent: var(--icon-accent);
 }
 
 :root {
@@ -76,6 +79,9 @@
 
   --amber-200: #fde68a;
   --amber-300: #fcd34d;
+
+  /* Decorative icons: theme amber on dark backgrounds */
+  --icon-accent: var(--amber-300);
 
   --glow-amber: rgba(251, 191, 36, 0.15);
   --glow-green: rgba(132, 204, 22, 0.08);
@@ -115,6 +121,9 @@
   --amber-200: #b45309;
   --amber-300: #d97706;
 
+  /* Decorative icons: zinc on light backgrounds (amber washes out) */
+  --icon-accent: var(--color-val-500);
+
   --glow-amber: rgba(251, 191, 36, 0.08);
   --glow-green: rgba(132, 204, 22, 0.04);
 }
@@ -133,6 +142,57 @@ body {
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
+}
+
+/* Hugeicons font icons — fixed square box so flex/absolute adornments center cleanly.
+   Do not force margin:0 — spacing utilities like mr-2 must still apply. */
+i.hgi-stroke {
+  box-sizing: border-box;
+  display: block;
+  flex-shrink: 0;
+  overflow: hidden;
+  font-style: normal !important;
+  font-weight: normal !important;
+  line-height: 1 !important;
+  text-align: center;
+  speak: never;
+  padding: 0;
+}
+i.hgi-stroke::before {
+  display: block;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+}
+/* free font paints a dual-layer via ::after — hide it for cleaner single-glyph adornments */
+i.hgi-stroke::after {
+  content: none !important;
+  display: none !important;
+}
+i.hgi-stroke.size-3 {
+  width: 0.75rem;
+  height: 0.75rem;
+  font-size: 0.75rem;
+}
+i.hgi-stroke.size-3\.5 {
+  width: 0.875rem;
+  height: 0.875rem;
+  font-size: 0.875rem;
+}
+i.hgi-stroke.size-4 {
+  width: 1rem;
+  height: 1rem;
+  font-size: 1rem;
+}
+i.hgi-stroke.size-4\.5 {
+  width: 1.125rem;
+  height: 1.125rem;
+  font-size: 1.125rem;
+}
+i.hgi-stroke.size-5 {
+  width: 1.25rem;
+  height: 1.25rem;
+  font-size: 1.25rem;
 }
 
 /* Animations */

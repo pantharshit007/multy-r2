@@ -133,6 +133,7 @@ export function UploadBox({
       onError(null);
       try {
         const result = await createEndpointFolder(record, folder);
+        setFolder("");
         onStatus(`Created folder ${result.key}`);
         onDone();
       } catch (cause) {
@@ -224,7 +225,9 @@ export function UploadBox({
           <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
             <span>Folder / Prefix</span>
             <div className="relative">
-              <FolderIcon className="absolute left-3 top-3 size-4 text-zinc-600" />
+              <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-zinc-600">
+                <FolderIcon className="size-4" />
+              </span>
               <input
                 className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
                 value={folder}
@@ -266,14 +269,14 @@ export function UploadBox({
             />
           ) : (
             <button
-              className="flex h-10 w-full items-center rounded-xl border border-zinc-800/80 bg-zinc-900/30 px-3.5 text-left text-sm text-zinc-400 outline-none hover:border-amber-300/40 hover:bg-zinc-900/60 transition-all"
+              className="flex h-10 w-full items-center gap-2 rounded-xl border border-zinc-800/80 bg-zinc-900/30 px-3.5 text-left text-sm text-zinc-400 outline-none hover:border-amber-300/40 hover:bg-zinc-900/60 transition-all"
               type="button"
               onClick={() => {
                 setKey(objectName);
                 setIsEditingName(true);
               }}
             >
-              <FileIcon className="size-4 mr-2 text-zinc-600 shrink-0" />
+              <FileIcon className="size-4 shrink-0" />
               <span className="truncate">{resolvedName || "temp/name.jpg"}</span>
             </button>
           )}

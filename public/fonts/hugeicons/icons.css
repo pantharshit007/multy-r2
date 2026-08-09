@@ -1,0 +1,64 @@
+@font-face {
+  font-family: "hugeicons-stroke-rounded";
+  src: url("hgi-stroke-rounded.woff2") format("woff2");
+  font-display: block;
+}
+
+.hgi-stroke {
+  font-family: "hugeicons-stroke-rounded" !important;
+  font-style: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  position: relative;
+  display: inline-block;
+  font-variant: normal;
+  font-variant-ligatures: discretionary-ligatures;
+  font-feature-settings: "liga" 1;
+  line-height: 1;
+  text-rendering: auto;
+  font-display: swap;
+}
+
+.hgi-stroke.hgi-copy::before {
+  content: "\f1a7c";
+}
+
+.hgi-stroke.hgi-delete-04::before {
+  content: "\f1b37";
+}
+
+.hgi-stroke.hgi-link-square-02::before {
+  content: "\f1fb0";
+}
+
+.hgi-stroke.hgi-file-02::before {
+  content: "\f1c6b";
+}
+
+.hgi-stroke.hgi-folder-02::before {
+  content: "\f1d02";
+}
+
+.hgi-stroke.hgi-globe::before {
+  content: "\f1d82";
+}
+
+.hgi-stroke.hgi-database-01::before {
+  content: "\f1b20";
+}
+
+.hgi-stroke.hgi-server-stack-01::before {
+  content: "\f2572";
+}
+
+.hgi-stroke.hgi-image-03::before {
+  content: "\f1e87";
+}
+
+.hgi-stroke.hgi-sun-01::before {
+  content: "\f2723";
+}
+
+.hgi-stroke.hgi-moon-02::before {
+  content: "\f2174";
+}

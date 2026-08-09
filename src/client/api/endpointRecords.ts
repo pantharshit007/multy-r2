@@ -11,7 +11,7 @@ import type {
 } from "../../shared";
 import { DEFAULT_UPLOAD_SETTINGS } from "../../shared";
 import { joinUrl } from "../../shared/utils/url";
-import { encodeKey, sanitizeKey, sanitizeFolder } from "../../shared/utils/objectKeys";
+import { encodeKey, sanitizeKey, sanitizeFolder, isFolderObject } from "../../shared/utils/objectKeys";
 import { guessContentType } from "../../shared/utils/contentType";
 import { API_KEY_HEADER, BINDING_NAME_REGEX, FOLDER_CONTENT_TYPE, PUBLIC_ALIAS_PREFIX, R2_API_PREFIX } from "../../shared/constants";
 import { ENDPOINTS_STORAGE_KEY } from "../constants";
@@ -101,7 +101,14 @@ export async function listEndpointObjects(record: EndpointRecord, cursor?: strin
   if (cursor) params.set("cursor", cursor);
   const response = await endpointRequest(record, params.size ? `/?${params}` : "/", { method: "PATCH" });
   const body = (await response.json()) as {
-    objects?: Array<{ key: string; size: number; uploaded?: string | Date; etag?: string }>;
+    objects?: Array<{
+      key: string;
+      size: number;
+      uploaded?: string | Date;
+      etag?: string;
+      contentType?: string | null;
+      isFolder?: boolean;
+    }>;
     truncated?: boolean;
     cursor?: string;
   };
@@ -383,14 +390,24 @@ function clampQuality(value: unknown): number {
 
 function toObjectSummary(
   record: EndpointRecord,
-  object: { key: string; size: number; uploaded?: string | Date; etag?: string },
+  object: {
+    key: string;
+    size: number;
+    uploaded?: string | Date;
+    etag?: string;
+    contentType?: string | null;
+    isFolder?: boolean;
+  },
 ): R2ObjectSummary {
+  const contentType = object.contentType ?? null;
   return {
     key: object.key,
     size: object.size,
     uploaded: object.uploaded ? new Date(object.uploaded).toISOString() : null,
     etag: object.etag ?? "",
     publicUrl: publicUrlFor(record, object.key),
+    contentType,
+    isFolder: isFolderObject({ key: object.key, isFolder: object.isFolder, contentType }),
   };
 }
 

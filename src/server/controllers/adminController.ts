@@ -7,6 +7,7 @@ import type {
 } from "../../shared";
 import { joinUrl } from "../../shared";
 import { DEFAULT_PRIVATE_LINK_TTL_SECONDS } from "../../shared/constants";
+import { isDirectoryContentType } from "../../shared/utils/objectKeys";
 import {
   DEFAULT_OBJECT_LIST_LIMIT,
   MAX_OBJECT_LIST_LIMIT,
@@ -67,16 +68,22 @@ export async function listObjectsHandler(c: AppContext): Promise<Response> {
     prefix: c.req.query("prefix") ?? undefined,
     cursor: c.req.query("cursor") ?? undefined,
     limit,
+    include: ["httpMetadata"],
   });
 
   return c.json<ObjectListResponse>({
-    objects: listed.objects.map((object) => ({
-      key: object.key,
-      size: object.size,
-      uploaded: object.uploaded?.toISOString() ?? null,
-      etag: object.etag,
-      publicUrl: bucket.publicBaseUrl ? joinUrl(bucket.publicBaseUrl, object.key) : null,
-    })),
+    objects: listed.objects.map((object) => {
+      const contentType = object.httpMetadata?.contentType ?? null;
+      return {
+        key: object.key,
+        size: object.size,
+        uploaded: object.uploaded?.toISOString() ?? null,
+        etag: object.etag,
+        publicUrl: bucket.publicBaseUrl ? joinUrl(bucket.publicBaseUrl, object.key) : null,
+        contentType,
+        isFolder: object.key.endsWith("/") || isDirectoryContentType(contentType),
+      };
+    }),
     truncated: listed.truncated,
     cursor: listed.truncated ? listed.cursor : null,
   });
