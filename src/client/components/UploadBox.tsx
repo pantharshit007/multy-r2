@@ -205,7 +205,7 @@ export function UploadBox({
                   {isDragging ? "Drop file to select" : "Choose or drag a file to upload"}
                 </span>
                 <span className="mt-1 block text-xs text-zinc-500">
-                  Any image or document up to worker limit
+                  Images, documents, and other files
                 </span>
               </div>
             </div>

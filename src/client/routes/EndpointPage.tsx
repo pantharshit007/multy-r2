@@ -15,7 +15,7 @@ import { SettingsPanel } from "../components/SettingsPanel";
 import { FileSkeleton } from "../components/FileSkeleton";
 import { DeleteObjectDialog } from "../components/DeleteObjectDialog";
 import { RefreshIcon, ArrowLeftIcon } from "../components/Icons";
-import { REFRESH_FEEDBACK_MIN_MS } from "../constants";
+import { REFRESH_FEEDBACK_MIN_MS, UPLOAD_LIMITS, CLOUDFLARE_UPLOAD_LIMITS_URL } from "../constants";
 
 export function EndpointPage() {
   const { bucketId } = useParams({ from: "/buckets/$bucketId" });
@@ -186,6 +186,22 @@ export function EndpointPage() {
             />
             <span>{isRefreshing ? "Refreshing…" : "Refresh list"}</span>
           </button>
+        </div>
+
+        <div className="mt-2 space-y-1.5 text-[11px] leading-relaxed">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <span className="text-zinc-500">Upload size per file</span>
+            <ul className="flex flex-wrap items-center gap-x-3 gap-y-1" aria-label="Cloudflare upload limits">
+              {UPLOAD_LIMITS.map(({ plan, limit }) => <li key={plan} className="inline-flex items-center gap-2">
+                <span aria-hidden="true" className="size-1 shrink-0 rounded-full bg-amber-400" />
+                <span className="text-zinc-500">{plan} <span className="ml-1 font-semibold text-zinc-300">{limit}</span></span>
+              </li>)}
+            </ul>
+          </div>
+          <p className="text-zinc-500">
+            Your endpoint may set a lower limit.{" "}
+            <a href={CLOUDFLARE_UPLOAD_LIMITS_URL} target="_blank" rel="noopener noreferrer" className="ml-1 underline underline-offset-2 hover:text-zinc-300">View limits</a>
+          </p>
         </div>
 
         {/* Global Notifications inside the file panel */}
