@@ -96,10 +96,10 @@ export function deleteEndpointRecord(id: string): EndpointRecord[] {
   return updated;
 }
 
-export async function listEndpointObjects(record: EndpointRecord, cursor?: string | null): Promise<ObjectListResponse> {
+export async function listEndpointObjects(record: EndpointRecord, cursor?: string | null, signal?: AbortSignal): Promise<ObjectListResponse> {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
-  const response = await endpointRequest(record, params.size ? `/?${params}` : "/", { method: "PATCH" });
+  const response = await endpointRequest(record, params.size ? `/?${params}` : "/", { method: "PATCH", signal });
   const body = (await response.json()) as {
     objects?: Array<{
       key: string;

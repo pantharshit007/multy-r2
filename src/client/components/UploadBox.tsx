@@ -1,10 +1,12 @@
 import { DragEvent, FormEvent, useEffect, useRef, useState, useTransition } from "react";
 import type { EndpointRecord } from "../../shared";
-import { uploadEndpointObject, createEndpointFolder } from "../api";
+import { uploadEndpointObject } from "../api";
 import { buildPreviewKey, buildDerivedObjectName } from "../utils/naming";
 import { MAX_UPLOAD_HISTORY_ENTRIES } from "../constants";
 import { describeUploadResult } from "../utils/format";
-import { UploadIcon, FolderIcon, CheckIcon, FileIcon } from "./Icons";
+import { UploadIcon, CheckIcon, FileIcon } from "./Icons";
+
+import { FolderPicker } from "./FolderPicker";
 
 interface UploadBoxProps {
   record: EndpointRecord;
@@ -103,6 +105,10 @@ export function UploadBox({
     }
   }, [file, record.uploadSettings.duplicateStrategy]);
 
+  useEffect(() => {
+    setFolder("");
+  }, [record.id, record.endPoint, record.workerBucketMode, record.bucketBindingName]);
+
   const objectName = buildDerivedObjectName(file, key, record.uploadSettings, renameSalt);
   const resolvedName = buildPreviewKey(folder, objectName);
 
@@ -124,20 +130,6 @@ export function UploadBox({
         onDone();
       } catch (cause) {
         onError(cause instanceof Error ? cause.message : "Could not upload file");
-      }
-    });
-  }
-
-  function createFolder() {
-    startTransition(async () => {
-      onError(null);
-      try {
-        const result = await createEndpointFolder(record, folder);
-        setFolder("");
-        onStatus(`Created folder ${result.key}`);
-        onDone();
-      } catch (cause) {
-        onError(cause instanceof Error ? cause.message : "Could not create folder");
       }
     });
   }
@@ -221,31 +213,17 @@ export function UploadBox({
         </div>
 
         {/* Folder & Path Configuration */}
-        <div className="grid gap-3 sm:grid-cols-[1fr_auto] items-end">
-          <label className="grid gap-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-            <span>Folder / Prefix</span>
-            <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-zinc-600">
-                <FolderIcon className="size-4" />
-              </span>
-              <input
-                className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9 pr-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 focus:bg-zinc-900/80 transition-all"
-                value={folder}
-                onChange={(event) => setFolder(event.target.value)}
-                placeholder="temp (optional)"
-              />
-            </div>
-          </label>
-
-          <button
-            className="h-10 rounded-xl border border-zinc-800 px-4 text-xs font-semibold text-zinc-300 hover:border-amber-300/60 hover:bg-zinc-900/60 transition-all"
-            type="button"
-            disabled={disabled || isPending || !folder}
-            onClick={createFolder}
-          >
-            Create folder placeholder
-          </button>
-        </div>
+        <FolderPicker
+          key={`${record.id}:${record.endPoint}:${record.workerBucketMode}:${record.bucketBindingName}`}
+          record={record}
+          value={folder}
+          disabled={disabled || isPending}
+          onChange={setFolder}
+          onCreated={(path) => {
+            onStatus(`Created folder ${path}/`);
+            onDone();
+          }}
+        />
 
         {/* Object Key Name Overrides */}
         <div className="grid gap-1.5">
