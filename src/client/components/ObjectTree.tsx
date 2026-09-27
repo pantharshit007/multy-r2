@@ -5,11 +5,13 @@ import { FolderIcon, TrashIcon } from "./Icons";
 import { ObjectRow } from "./ObjectRow";
 import { TreeFolderEditor } from "./TreeFolderEditor";
 
+/** Render selectable folders with inline creation and collapse controls. */
 export function ObjectTree(props: ObjectTreeProps) {
   const root = useMemo(() => buildObjectTree(props.objects), [props.objects]);
   const [selected, setSelected] = useState("");
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<string | null>(null);
+  /** Select a folder and toggle its expanded state. */
   function toggle(path: string) {
     setSelected(path);
     setExpanded((current) => {
@@ -18,6 +20,7 @@ export function ObjectTree(props: ObjectTreeProps) {
       return next;
     });
   }
+  /** Open an inline editor inside the selected folder. */
   function startCreating() {
     setExpanded((current) => new Set([...current, selected]));
     setEditing(selected);
@@ -37,6 +40,7 @@ export function ObjectTree(props: ObjectTreeProps) {
   </div>;
 }
 
+/** Render one directory level and recurse into expanded children. */
 function TreeContents({ node, ...props }: TreeContentsProps) {
   return <>
     {props.editing === node.path && <TreeFolderEditor parent={node.path} record={props.record} onCancel={props.onCancel} onCreated={props.onCreated} />}

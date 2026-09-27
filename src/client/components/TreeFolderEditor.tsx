@@ -1,14 +1,17 @@
 import { useRef, useState } from "react";
 import type { TreeFolderEditorProps } from "../types/objectTree";
-import { createEndpointFolderPath, loadEndpointFolders } from "../lib/folders";
+import { createEndpointFolderPath } from "../lib/folders";
+import { endpointFolderExists } from "../api";
 import { sanitizeFolder } from "../../shared/utils/objectKeys";
 import { FolderIcon } from "./Icons";
 
+/** Create a nested folder inline without scanning the bucket. */
 export function TreeFolderEditor({ parent, record, onCancel, onCreated }: TreeFolderEditorProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const busy = useRef(false);
+  /** Validate the destination, check its marker, and create missing ancestors. */
   async function create() {
     if (busy.current) return;
     busy.current = true;
@@ -18,9 +21,8 @@ export function TreeFolderEditor({ parent, record, onCancel, onCreated }: TreeFo
       const child = sanitizeFolder(name);
       if (child.includes("//")) throw new Error("Enter a folder name without empty path segments.");
       const path = parent ? `${parent}/${child}` : child;
-      const existing = await loadEndpointFolders(record, new AbortController().signal);
-      if (existing.includes(path)) throw new Error("This folder already exists.");
-      await createEndpointFolderPath(record, path, existing);
+      if (await endpointFolderExists(record, path)) throw new Error("This folder already exists.");
+      await createEndpointFolderPath(record, path, []);
       onCreated(path);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Could not create folder");

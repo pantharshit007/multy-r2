@@ -8,6 +8,7 @@ import {
 import type { EndpointRecord, R2ObjectSummary } from "../../shared";
 import { UploadBox } from "../components/UploadBox";
 import { ObjectTree } from "../components/ObjectTree";
+import { invalidateFolderCache } from "../lib/folderCache";
 import { readDirectoryView, saveDirectoryView } from "../lib/directoryView";
 import type { DirectoryView } from "../types/objectTree";
 import { ObjectRow } from "../components/ObjectRow";
@@ -17,6 +18,7 @@ import { DeleteObjectDialog } from "../components/DeleteObjectDialog";
 import { RefreshIcon, ArrowLeftIcon } from "../components/Icons";
 import { REFRESH_FEEDBACK_MIN_MS, UPLOAD_LIMITS, CLOUDFLARE_UPLOAD_LIMITS_URL } from "../constants";
 
+/** Manage objects and upload settings for the selected endpoint record. */
 export function EndpointPage() {
   const { bucketId } = useParams({ from: "/buckets/$bucketId" });
   const [record, setRecord] = useState<EndpointRecord | null>(() => findRecord(bucketId));
@@ -38,6 +40,7 @@ export function EndpointPage() {
     else setIsLoading(false);
   }, [bucketId]);
 
+  /** Replace the object page using the requested endpoint scope. */
   async function refreshObjects(target = record) {
     if (!target) return;
     setIsLoading(true);
@@ -53,6 +56,7 @@ export function EndpointPage() {
     }
   }
 
+  /** Run a pending action with shared status and error handling. */
   function runAction(action: () => Promise<void>) {
     startTransition(async () => {
       setError(null);
@@ -65,6 +69,7 @@ export function EndpointPage() {
     });
   }
 
+  /** Append the next object page while retaining the existing rows. */
   async function loadMore() {
     if (!record || !cursor || isRefreshing) return;
     const response = await listEndpointObjects(record, cursor);
@@ -72,7 +77,9 @@ export function EndpointPage() {
     setCursor(response.cursor);
   }
 
+  /** Invalidate folder discovery and reload objects with refresh feedback. */
   async function refreshList() {
+    if (record) invalidateFolderCache(record);
     setStatus(null);
     setUploadLogReset((current) => current + 1);
     setIsRefreshing(true);
@@ -89,6 +96,7 @@ export function EndpointPage() {
     }
   }
 
+  /** Delete the confirmed object and remove its row after success. */
   function confirmDelete() {
     if (!record || !objectPendingDeletion) return;
 
@@ -309,6 +317,7 @@ export function EndpointPage() {
   );
 }
 
+/** Choose the display domain for the active bucket or endpoint. */
 function displayDomain(record: EndpointRecord): string {
   if (record.workerBucketMode && record.bucketBindingName) {
     return record.bucketDomains?.[record.bucketBindingName] || record.endPoint;
@@ -316,6 +325,7 @@ function displayDomain(record: EndpointRecord): string {
   return record.customDomain || record.endPoint;
 }
 
+/** Look up the route endpoint in the locally saved records. */
 function findRecord(id: string): EndpointRecord | null {
   return listEndpointRecords().find((record) => record.id === id) ?? null;
 }

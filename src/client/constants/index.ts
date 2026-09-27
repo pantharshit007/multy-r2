@@ -47,3 +47,6 @@ export const UPLOAD_LIMITS = [
   { plan: "Business", limit: "200 MB" },
   { plan: "Enterprise", limit: "Varies" },
 ] as const;
+
+export const FOLDER_CACHE_TTL_MS = 30_000;
+export const MAX_FOLDER_CACHE_ENTRIES = 20;

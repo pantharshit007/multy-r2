@@ -14,6 +14,7 @@ interface ObjectRowProps {
   onStatus: (message: string | null) => void;
 }
 
+/** Display an object with copy, open, and delete actions. */
 export function ObjectRow({
   record,
   compact = false,
@@ -32,6 +33,7 @@ export function ObjectRow({
     };
   }, []);
 
+  /** Copy the resolved public URL and show temporary feedback. */
   async function copyPublicUrl() {
     try {
       await navigator.clipboard.writeText(publicUrl);

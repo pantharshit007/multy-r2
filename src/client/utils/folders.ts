@@ -14,6 +14,7 @@ export function collectFolders(objects: R2ObjectSummary[]): string[] {
   return [...folders].sort((a, b) => a.localeCompare(b));
 }
 
+/** Filter immediate children of the current directory by name. */
 export function matchFolders(folders: string[], parent: string, query: string): string[] {
   const prefix = parent ? `${parent}/` : "";
   return folders.filter((folder) => {

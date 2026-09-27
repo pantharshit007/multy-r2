@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { invalidateFolderCache } from "../lib/folderCache";
 import { useDialogOutsideClick } from "../lib/useDialogOutsideClick";
 import { createEndpointFolderPath, loadEndpointFolders } from "../lib/folders";
 import { matchFolders, splitFolderPath } from "../utils/folders";
@@ -7,6 +8,7 @@ import { sanitizeFolder } from "../../shared/utils/objectKeys";
 import type { FolderPickerProps } from "../types/folderPicker";
 import { ArrowLeftIcon, FolderIcon } from "./Icons";
 
+/** Browse discovered folders or choose a typed upload path without waiting for discovery. */
 export function FolderPicker({ record, value, disabled, onChange, onCreated }: FolderPickerProps) {
   const [open, setOpen] = useState(false);
   const [pathInput, setPathInput] = useState("");
@@ -31,7 +33,8 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
   const parentExists = !parent || folders.includes(parent);
   const matches = matchFolders(folders, parent, query);
   const exists = folders.includes(candidate);
-  const canCreate = Boolean(candidate) && !exists && !candidate.includes("..") && !candidate.includes("//") && !loading && !error;
+  const validCandidate = Boolean(candidate) && !candidate.includes("..") && !candidate.includes("//");
+  const canCreate = validCandidate && !exists;
 
   useEffect(() => {
     mounted.current = true;
@@ -49,8 +52,11 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
     if (!open) return;
     const controller = new AbortController();
     setLoading(true);
+    setFolders([]);
     setError(null);
-    loadEndpointFolders(record, controller.signal).then((next) => {
+    loadEndpointFolders(record, controller.signal, (next) => {
+      if (!controller.signal.aborted) setFolders(next);
+    }).then((next) => {
       if (!controller.signal.aborted) setFolders(next);
     }).catch((cause) => {
       if (!controller.signal.aborted) setError(cause instanceof Error ? cause.message : "Could not load folders");
@@ -62,25 +68,29 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
     document.getElementById(`${id}-option-${active}`)?.scrollIntoView({ block: "nearest" });
   }, [active, id]);
 
+  /** Navigate into a folder while retaining an editable full path. */
   function browse(path: string) {
     setPathInput(path ? `${path}/` : "");
     setActive(0);
     input.current?.focus();
   }
 
+  /** Apply the upload prefix and dismiss the picker. */
   function select(path: string) {
     onChange(path);
     setOpen(false);
   }
 
+  /** Browse folders with children, or select directly with the modifier shortcut. */
   function activate(path: string, forceSelect: boolean) {
-    if (!forceSelect && folders.some((folder) => folder.startsWith(`${path}/`))) {
+    if (!forceSelect && (loading || folders.some((folder) => folder.startsWith(`${path}/`)))) {
       browse(path);
     } else {
       select(path);
     }
   }
 
+  /** Create missing ancestors and select the resulting folder. */
   async function create() {
     if (!canCreate || busy.current) return;
     busy.current = true;
@@ -121,7 +131,7 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
       <div className="mx-5 mt-4 flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/60 p-2 focus-within:border-amber-300/70">
         <button type="button" aria-label="Go to parent folder" disabled={!parent || creating} onClick={() => browse(parent.split("/").slice(0, -1).join("/"))} className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 disabled:opacity-30"><ArrowLeftIcon className="size-4" /></button>
         <input ref={input} role="combobox" aria-label="Search or create folder" aria-expanded="true" aria-controls={`${id}-list`} aria-autocomplete="list"
-          aria-activedescendant={matches[active] && !loading ? `${id}-option-${active}` : undefined}
+          aria-activedescendant={matches[active] ? `${id}-option-${active}` : undefined}
           disabled={creating} value={pathInput} placeholder="Type a folder path, e.g. photos/vacation…"
           className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-zinc-600"
           onChange={(event) => { setPathInput(event.target.value); setActive(0); }}
@@ -132,7 +142,8 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
               if (matches.length) setActive((current) => (current + (event.key === "ArrowDown" ? 1 : -1) + matches.length) % matches.length);
             } else if (event.key === "Enter") {
               event.preventDefault();
-              if (loading || creating || error) return;
+              if (creating) return;
+              if ((event.metaKey || event.ctrlKey) && !matches[active] && validCandidate) { select(candidate); return; }
               if (matches[active]) activate(matches[active], event.metaKey || event.ctrlKey);
               else if (canCreate) void create();
               else if (!query && parentExists) select(parent);
@@ -146,12 +157,12 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
       </div>
       <div className="flex items-center justify-between gap-3 px-5 py-3">
         <p className="min-w-0 truncate text-xs text-zinc-500" title={parent || "Bucket root"}>/{parent && `${parent}/`}</p>
-        <button type="button" disabled={creating || !parentExists || loading} onClick={() => select(parent)} className="shrink-0 text-xs font-semibold text-amber-300 hover:text-amber-200 disabled:opacity-40">{parent ? "Use this folder" : "Use bucket root"}</button>
+        <button type="button" disabled={creating || (!!parent && (parent.includes("..") || parent.includes("//")))} onClick={() => select(parent)} className="shrink-0 text-xs font-semibold text-amber-300 hover:text-amber-200 disabled:opacity-40">{parent ? "Use this folder" : "Use bucket root"}</button>
       </div>
       <div className="max-h-[40dvh] min-h-32 overflow-y-auto px-3 pb-3">
-        {loading ? <p role="status" className="p-3 text-sm text-zinc-500">Loading folders…</p> : error ? <div role="alert" className="p-3 text-sm text-red-300">{error}<button type="button" onClick={() => setRetry((current) => current + 1)} className="ml-3 underline">Retry</button></div> : null}
+        {loading ? <p role="status" className="p-3 text-sm text-zinc-500">Loading folders…</p> : error ? <div role="alert" className="p-3 text-sm text-red-300">{error}<button type="button" onClick={() => { invalidateFolderCache(record); setRetry((current) => current + 1); }} className="ml-3 underline">Retry</button></div> : null}
         <div id={`${id}-list`} role="listbox" aria-label="Folders" aria-busy={loading}>
-          {!loading && !error && matches.map((path, index) => <div key={path} className={`flex items-center rounded-xl ${index === active ? "bg-amber-300/10 text-amber-200" : "text-zinc-300 hover:bg-zinc-900"}`}>
+          {matches.map((path, index) => <div key={path} className={`flex items-center rounded-xl ${index === active ? "bg-amber-300/10 text-amber-200" : "text-zinc-300 hover:bg-zinc-900"}`}>
             <button type="button" role="option" id={`${id}-option-${index}`} aria-selected={index === active} disabled={creating}
               onFocus={() => setActive(index)} onClick={() => select(path)}
               onKeyDown={(event) => {
@@ -167,6 +178,7 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
           </div>)}
         </div>
         {!loading && !error && !matches.length && <p className="p-3 text-sm text-zinc-500">{query ? "No matching folders." : "No subfolders here."}</p>}
+        {validCandidate && !exists && <button type="button" disabled={creating} onClick={() => select(candidate)} className="mt-2 w-full rounded-xl px-3 py-2 text-left text-sm text-amber-200 hover:bg-amber-300/5">Use “{candidate}” for upload</button>}
         {canCreate && <button type="button" disabled={creating} onClick={() => void create()} className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-amber-300/30 px-3 py-3 text-left text-sm text-amber-200 hover:bg-amber-300/5 disabled:opacity-50"><span>+</span><span className="min-w-0 break-all">{creating ? "Creating…" : `Create & select “${candidate}”`}</span></button>}
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-800 bg-zinc-900/40 px-5 py-3 text-xs text-zinc-400 [&_kbd]:rounded-md [&_kbd]:bg-zinc-800 [&_kbd]:px-1.5 [&_kbd]:py-1 [&_kbd]:font-sans [&_kbd]:text-zinc-200">

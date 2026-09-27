@@ -1,4 +1,4 @@
-import { DragEvent, FormEvent, useEffect, useRef, useState, useTransition } from "react";
+import { DragEvent, FormEvent, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type { EndpointRecord } from "../../shared";
 import { uploadEndpointObject } from "../api";
 import { buildPreviewKey, buildDerivedObjectName } from "../utils/naming";
@@ -17,6 +17,7 @@ interface UploadBoxProps {
   onStatus: (message: string | null) => void;
 }
 
+/** Select a file and destination, then upload to the active endpoint scope. */
 export function UploadBox({
   record,
   disabled,
@@ -38,11 +39,13 @@ export function UploadBox({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragDepthRef = useRef(0);
 
+  /** Replace the staged file and clear errors from the previous selection. */
   function selectFile(next: File | null) {
     setFile(next);
     if (next) onError(null);
   }
 
+  /** Track nested drag targets so the drop highlight remains stable. */
   function handleDragEnter(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     event.stopPropagation();
@@ -53,6 +56,7 @@ export function UploadBox({
     }
   }
 
+  /** Clear the drop highlight after leaving the entire dropzone. */
   function handleDragLeave(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     event.stopPropagation();
@@ -62,6 +66,7 @@ export function UploadBox({
     }
   }
 
+  /** Accept file drops only while uploads are enabled. */
   function handleDragOver(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     event.stopPropagation();
@@ -69,6 +74,7 @@ export function UploadBox({
     event.dataTransfer.dropEffect = "copy";
   }
 
+  /** Stage the first dropped file without starting an upload. */
   function handleDrop(event: DragEvent<HTMLDivElement>) {
     event.preventDefault();
     event.stopPropagation();
@@ -105,13 +111,14 @@ export function UploadBox({
     }
   }, [file, record.uploadSettings.duplicateStrategy]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setFolder("");
   }, [record.id, record.endPoint, record.workerBucketMode, record.bucketBindingName]);
 
   const objectName = buildDerivedObjectName(file, key, record.uploadSettings, renameSalt);
   const resolvedName = buildPreviewKey(folder, objectName);
 
+  /** Upload the staged file using the current endpoint and destination. */
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) return;

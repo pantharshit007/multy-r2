@@ -20,6 +20,7 @@ import {
   normalizeOptionalText,
 } from "../lib/endpointResolver";
 import { fitImage, canvasToBlob, isImageFile, toMimeType } from "../lib/imageProcessing";
+import { invalidateFolderCache } from "../lib/folderCache";
 import { replaceExtension } from "../utils/naming";
 
 export function listEndpointRecords(): EndpointRecord[] {
@@ -96,6 +97,7 @@ export function deleteEndpointRecord(id: string): EndpointRecord[] {
   return updated;
 }
 
+/** Fetch one object-list page, optionally cancelling a stale request. */
 export async function listEndpointObjects(record: EndpointRecord, cursor?: string | null, signal?: AbortSignal): Promise<ObjectListResponse> {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
@@ -207,6 +209,14 @@ export async function uploadEndpointObject(record: EndpointRecord, file: File, k
   };
 }
 
+/** Check one folder marker without listing unrelated objects. */
+export async function endpointFolderExists(record: EndpointRecord, folder: string): Promise<boolean> {
+  const response = await endpointFetch(record, `/${encodeKey(`${sanitizeFolder(folder)}/`)}`, { method: "HEAD" });
+  if (response.status === 404) return false;
+  if (!response.ok) throw new Error(`Could not check folder (${response.status})`);
+  return true;
+}
+
 export async function createEndpointFolder(record: EndpointRecord, folder: string): Promise<{ key: string; publicUrl: string | null }> {
   const cleanFolder = sanitizeFolder(folder);
   const key = `${cleanFolder}/`;
@@ -297,13 +307,15 @@ async function endpointFetch(record: EndpointRecord, path: string, init?: Reques
     ? `/bucket/${encodeURIComponent(record.bucketBindingName)}`
     : "";
   const target = new URL(`${R2_API_PREFIX}${scope}${path}`, `${record.endPoint}/`);
-  return await fetch(target.toString(), {
+  const response = await fetch(target.toString(), {
     ...init,
     headers: {
       [API_KEY_HEADER]: record.apiKey,
       ...init?.headers,
     },
   });
+  if (response.ok && (init?.method === "PUT" || init?.method === "DELETE")) invalidateFolderCache(record);
+  return response;
 }
 
 async function objectExists(record: EndpointRecord, key: string): Promise<boolean> {
