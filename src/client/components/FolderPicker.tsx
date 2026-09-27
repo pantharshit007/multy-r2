@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useDialogOutsideClick } from "../lib/useDialogOutsideClick";
 import { createEndpointFolderPath, loadEndpointFolders } from "../lib/folders";
 import { matchFolders, splitFolderPath } from "../utils/folders";
 import { sanitizeFolder } from "../../shared/utils/objectKeys";
@@ -21,6 +22,11 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
   const busy = useRef(false);
   const mounted = useRef(true);
   const id = useId();
+  useDialogOutsideClick({
+    dialogRef: dialog,
+    enabled: open,
+    onClose: () => { if (!busy.current) setOpen(false); },
+  });
   const { parent, query, candidate } = splitFolderPath(pathInput);
   const parentExists = !parent || folders.includes(parent);
   const matches = matchFolders(folders, parent, query);

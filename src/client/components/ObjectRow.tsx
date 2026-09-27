@@ -6,6 +6,7 @@ import { formatBytes } from "../utils/format";
 import { CopyIcon, CheckIcon, ExternalLinkIcon, TrashIcon, ImageIcon, CodeIcon, FileIcon, FolderIcon } from "./Icons";
 
 interface ObjectRowProps {
+  compact?: boolean;
   record: EndpointRecord;
   object: R2ObjectSummary;
   onDelete: () => void;
@@ -15,6 +16,7 @@ interface ObjectRowProps {
 
 export function ObjectRow({
   record,
+  compact = false,
   object,
   onDelete,
   onError,
@@ -55,7 +57,7 @@ export function ObjectRow({
     "inline-flex size-8 shrink-0 items-center justify-center rounded-lg border transition-all duration-200 cursor-pointer";
 
   return (
-    <div className="grid gap-2 px-4 py-3 text-sm text-zinc-400 md:grid-cols-[minmax(0,1fr)_4.5rem_9.5rem_6.75rem] md:items-center hover:bg-zinc-900/20 transition-all duration-150 group">
+    <div className={`grid gap-2 px-4 py-3 text-sm text-zinc-400 ${compact ? "sm:grid-cols-[minmax(0,1fr)_auto]" : "md:grid-cols-[minmax(0,1fr)_4.5rem_9.5rem_6.75rem]"} items-center hover:bg-zinc-900/20 transition-all duration-150 group`}>
       <div className="flex items-center gap-3 min-w-0">
         <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 group-hover:border-zinc-700 group-hover:text-zinc-200 transition-colors">
           {isFolder ? (
@@ -69,17 +71,19 @@ export function ObjectRow({
           )}
         </div>
         <span className="min-w-0 truncate font-medium text-zinc-100 group-hover:text-zinc-50 transition-colors" title={object.key}>
-          {object.key}
+          {compact ? object.key.split("/").pop() || object.key : object.key}
         </span>
       </div>
 
-      <span className="text-zinc-500 font-mono text-xs tabular-nums md:text-sm">
+      {!compact && <><span className="text-zinc-500 font-mono text-xs tabular-nums md:text-sm">
         {formatBytes(object.size)}
       </span>
 
       <span className="text-zinc-500 text-xs whitespace-nowrap">
         {object.uploaded ? new Date(object.uploaded).toLocaleString() : "-"}
       </span>
+
+      </>}
 
       <span className="flex items-center justify-end gap-1.5 flex-nowrap">
         {!isFolder && (

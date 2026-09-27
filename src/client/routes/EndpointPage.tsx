@@ -7,6 +7,9 @@ import {
 } from "../api";
 import type { EndpointRecord, R2ObjectSummary } from "../../shared";
 import { UploadBox } from "../components/UploadBox";
+import { ObjectTree } from "../components/ObjectTree";
+import { readDirectoryView, saveDirectoryView } from "../lib/directoryView";
+import type { DirectoryView } from "../types/objectTree";
 import { ObjectRow } from "../components/ObjectRow";
 import { SettingsPanel } from "../components/SettingsPanel";
 import { FileSkeleton } from "../components/FileSkeleton";
@@ -17,6 +20,7 @@ import { REFRESH_FEEDBACK_MIN_MS } from "../constants";
 export function EndpointPage() {
   const { bucketId } = useParams({ from: "/buckets/$bucketId" });
   const [record, setRecord] = useState<EndpointRecord | null>(() => findRecord(bucketId));
+  const [view, setView] = useState<DirectoryView>(readDirectoryView);
   const [objects, setObjects] = useState<R2ObjectSummary[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -209,14 +213,24 @@ export function EndpointPage() {
           onStatus={setStatus}
         />
 
+        <div className="mt-6 flex items-center justify-between gap-3">
+          <span className="text-xs text-zinc-500">Browse objects</span>
+          <div role="group" aria-label="Directory view" className="inline-flex rounded-xl border border-zinc-800 bg-zinc-900/40 p-1">
+            {(["list", "tree"] as const).map((mode) => <button key={mode} type="button" aria-pressed={view === mode} onClick={() => { setView(mode); saveDirectoryView(mode); }}
+              className={`rounded-lg px-4 py-1.5 text-xs font-semibold transition-colors ${view === mode ? "bg-amber-300/10 text-amber-200" : "text-zinc-500 hover:text-zinc-200"}`}>
+              {mode === "list" ? "List" : "Tree"}
+            </button>)}
+          </div>
+        </div>
+
         {/* Object Tables */}
-        <div className="mt-6 overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950/20">
-          <div className="hidden grid-cols-[minmax(0,1fr)_4.5rem_9.5rem_6.75rem] gap-2 bg-zinc-900/40 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 border-b border-zinc-850 md:grid">
+        <div className="mt-3 overflow-hidden rounded-2xl border border-zinc-800/80 bg-zinc-950/20">
+          {view === "list" && <div className="hidden grid-cols-[minmax(0,1fr)_4.5rem_9.5rem_6.75rem] gap-2 bg-zinc-900/40 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-500 border-b border-zinc-850 md:grid">
             <span>Object Key</span>
             <span>Size</span>
             <span>Uploaded On</span>
             <span className="text-right">Actions</span>
-          </div>
+          </div>}
 
           {isLoading ? (
             <FileSkeleton />
@@ -224,6 +238,8 @@ export function EndpointPage() {
             <div className="p-8 text-center text-xs text-zinc-500 font-medium bg-zinc-900/5">
               No files found in this bucket. Choose or drag a file above to begin uploading.
             </div>
+          ) : view === "tree" ? (
+            <ObjectTree key={`${record.id}:${record.endPoint}:${record.workerBucketMode}:${record.bucketBindingName}`} record={record} objects={objects} hasMore={Boolean(cursor)} onCreated={(path) => { runAction(async () => { await refreshObjects(); setStatus(`Created folder ${path}/`); }); }} onDelete={setObjectPendingDeletion} onError={setError} onStatus={setStatus} />
           ) : (
             <div className="divide-y divide-zinc-800/40">
               {objects.map((object) => (
