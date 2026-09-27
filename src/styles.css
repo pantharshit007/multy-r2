@@ -253,3 +253,19 @@ i.hgi-stroke.size-5 {
 }
 
 
+
+/* Keep tree interactions visible in both palettes. */
+.tree-hover:hover,
+[aria-label="Folder tree"] .group:hover {
+  background-color: rgb(255 255 255 / 0.07);
+}
+.tree-selected {
+  background-color: rgb(252 211 77 / 0.09);
+}
+:root.light .tree-hover:hover,
+:root.light [aria-label="Folder tree"] .group:hover {
+  background-color: rgb(24 24 27 / 0.1);
+}
+:root.light .tree-selected {
+  background-color: rgb(180 83 9 / 0.12);
+}

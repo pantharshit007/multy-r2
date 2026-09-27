@@ -1,3 +1,4 @@
+export const DIRECTORY_VIEW_STORAGE_KEY = "multy-r2:directory-view";
 export const ADMIN_STORAGE_KEY = "multy-r2:admin-api";
 export const ENDPOINTS_STORAGE_KEY = "multy-r2:endpoints";
 export const BUCKET_PICKER_DEBOUNCE_MS = 250;
@@ -39,3 +40,13 @@ export const SETUP_GUIDE_IMAGES = {
   r2CustomDomain: "/setup-guide/r2-custom-domain.png",
   multyEndpoint: "/setup-guide/multy-new-endpoint.png",
 } as const;
+
+export const CLOUDFLARE_UPLOAD_LIMITS_URL = "https://developers.cloudflare.com/workers/platform/limits/#request-and-response-limits";
+export const UPLOAD_LIMITS = [
+  { plan: "Free / Pro", limit: "100 MB" },
+  { plan: "Business", limit: "200 MB" },
+  { plan: "Enterprise", limit: "Varies" },
+] as const;
+
+export const FOLDER_CACHE_TTL_MS = 30_000;
+export const MAX_FOLDER_CACHE_ENTRIES = 20;
