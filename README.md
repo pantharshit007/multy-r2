@@ -76,3 +76,15 @@ Full Worker route reference: [docs/api.md](docs/api.md).
 Original idea and inspiration: [R2 Uploader](https://github.com/jw-12138/r2-uploader) by [jw-12138](https://github.com/jw-12138) — browser-based R2 management with API-key auth.
 
 **Multy** was created to manage multiple R2 buckets more easily. Tools like R2 Uploader work well for a single endpoint, but multi-bucket setups typically need a separate Worker per bucket, and the UI did not fit my needs.
+
+### Search indexing
+
+The client build prerenders `/` and `/setup-guide` with page-specific metadata,
+canonical URLs, structured data, and a sitemap. Bucket workspaces are marked
+`noindex`; only public pages appear in the sitemap. Cloudflare Pages serves unknown
+paths with the generated 404 page.
+
+For a self-hosted client, set `VITE_SITE_URL=https://your-client.example` before
+building (default: `https://multy.hrshit.in`). Use the client origin, not the Worker
+API endpoint. Run `pnpm build:client && pnpm test:seo` to check the generated pages.
+Submit `/sitemap.xml` to your search console after deployment.
