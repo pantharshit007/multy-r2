@@ -1,4 +1,4 @@
-import { NOT_FOUND_PAGE, PRIVATE_PAGE, PUBLIC_PAGES, SITE_URL, SOCIAL_IMAGE_META } from "../constants/seo";
+import { NOT_FOUND_PAGE, PRIVATE_PAGE, PUBLIC_PAGES, SITE_URL, SITE_AUTHOR, SOCIAL_IMAGE_META } from "../constants/seo";
 import { GITHUB_REPO_URL } from "../constants";
 
 export function getSeo(pathname: string) {
@@ -7,6 +7,7 @@ export function getSeo(pathname: string) {
   const url = page.path ? `${SITE_URL}${page.path}` : undefined;
   return {
     ...page,
+    author: SITE_AUTHOR,
     socialImageMeta: SOCIAL_IMAGE_META,
     url,
     robots: url ? "index, follow" : "noindex, follow",
@@ -14,6 +15,7 @@ export function getSeo(pathname: string) {
       "@context": "https://schema.org",
       "@type": path === "/" ? "WebApplication" : "TechArticle",
       name: page.title,
+      author: SITE_AUTHOR,
       description: page.description,
       url,
       ...(path === "/" ? { applicationCategory: "UtilitiesApplication", operatingSystem: "Web browser", sameAs: GITHUB_REPO_URL } : {}),
@@ -27,6 +29,7 @@ export function applySeo(pathname: string) {
   document.head.querySelectorAll('[data-seo]').forEach((node) => node.remove());
   const tags = {
     description: page.description,
+    author: page.author.name,
     robots: page.robots,
     "og:title": page.title,
     "og:description": page.description,

@@ -9,6 +9,7 @@ const sitemap = await readFile("dist/sitemap.xml", "utf8");
 const robots = await readFile("dist/robots.txt", "utf8");
 const redirects = await readFile("dist/_redirects", "utf8");
 for (const html of [home, guide, workspace, missing]) {
+  assert.match(html, /name="author" content="Harshit Pant"/);
   const ogImage = html.match(/property="og:image" content="([^"]+)"/);
   const twitterImage = html.match(/name="twitter:image" content="([^"]+)"/);
   assert.ok(ogImage, "Every page needs a social preview image");
@@ -24,6 +25,12 @@ for (const html of [home, guide]) {
   assert.match(html, /property="og:description"/);
   assert.match(html, /name="twitter:card"/);
   const schema = JSON.parse(html.match(/type="application\/ld\+json">(.*?)<\/script>/s)[1]);
+  assert.deepEqual(schema.author, {
+    "@type": "Person",
+    name: "Harshit Pant",
+    alternateName: "pantharshit007",
+    url: "https://hrshit.in/",
+  });
   assert.ok(sitemap.includes(`<loc>${schema.url}</loc>`));
   titles.add(html.match(/<title>(.*?)<\/title>/)[1]);
 }
@@ -31,6 +38,10 @@ assert.equal(titles.size, 2, "Public pages need distinct titles");
 assert.match(home, /Manage Cloudflare R2 buckets/);
 assert.match(home, /aria-label="Multy R2 on GitHub/);
 assert.match(guide, /AUTH_KEY_SECRET/);
+const guideCanonical = guide.match(/rel="canonical" href="([^"]+)"/)[1];
+assert.equal(new URL(guideCanonical).pathname, "/setup-guide/");
+assert.ok(sitemap.includes(`<loc>${guideCanonical}</loc>`));
+assert.doesNotMatch(sitemap, /\/setup-guide<\/loc>/);
 for (const html of [workspace, missing]) {
   assert.match(html, /content="noindex, follow"/);
   assert.doesNotMatch(html, /rel="canonical"|application\/ld\+json/);

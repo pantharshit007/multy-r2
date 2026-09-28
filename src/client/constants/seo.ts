@@ -9,7 +9,7 @@ export const PUBLIC_PAGES: Record<string, SeoPage> = {
     description: "Manage multiple Cloudflare R2 buckets from one open-source dashboard. Upload, browse, organize, and share files through your own Worker endpoints.",
   },
   "/setup-guide": {
-    path: "/setup-guide",
+    path: "/setup-guide/",
     title: "Cloudflare R2 Worker Setup Guide | Multy R2",
     description: "Set up your Cloudflare Worker, connect R2 buckets, configure API keys and custom domains, and start managing files with Multy R2's step-by-step guide.",
   },
@@ -34,3 +34,10 @@ export const SOCIAL_IMAGE_META = {
   "twitter:image": SOCIAL_IMAGE_URL,
   "twitter:image:alt": "Multy R2 — Cloudflare R2 File Manager",
 };
+
+export const SITE_AUTHOR = {
+  "@type": "Person",
+  name: "Harshit Pant",
+  alternateName: "pantharshit007",
+  url: "https://hrshit.in/",
+} as const;

@@ -7,6 +7,7 @@ export function escapeHtml(value) {
 export function renderHead(page) {
   const tags = {
     description: page.description, robots: page.robots,
+    author: page.author.name,
     "og:title": page.title, "og:description": page.description,
     "og:type": "website", "og:site_name": "Multy R2",
     ...page.socialImageMeta,

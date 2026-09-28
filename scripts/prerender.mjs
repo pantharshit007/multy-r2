@@ -21,7 +21,7 @@ try {
   await writeFile("dist/workspace.html", template.replace(/<title>.*?<\/title>/, renderHead(getSeo("/buckets/workspace"))));
   await writeFile("dist/404.html", template.replace(/<title>.*?<\/title>/, renderHead(getSeo("/not-found"))).replace('<div id="root"></div>', `<div id="root">${await render("/not-found")}</div>`));
   await writeFile("dist/robots.txt", `User-agent: *\nAllow: /\n\nSitemap: ${SITE_URL}/sitemap.xml\n`);
-  await writeFile("dist/sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${Object.keys(PUBLIC_PAGES).map((path) => `<url><loc>${escapeHtml(`${SITE_URL}${path}`)}</loc></url>`).join("")}</urlset>\n`);
+  await writeFile("dist/sitemap.xml", `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${Object.values(PUBLIC_PAGES).map(({ path }) => `<url><loc>${escapeHtml(`${SITE_URL}${path}`)}</loc></url>`).join("")}</urlset>\n`);
 } finally {
   await server.close();
 }
