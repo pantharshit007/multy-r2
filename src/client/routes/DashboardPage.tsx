@@ -28,7 +28,7 @@ const EMPTY_FORM: EndpointForm = {
 };
 
 export function DashboardPage() {
-  const [records, setRecords] = useState<EndpointRecord[]>(() => listEndpointRecords());
+  const [records, setRecords] = useState<EndpointRecord[]>(() => typeof window === "undefined" ? [] : listEndpointRecords());
   const [form, setForm] = useState<EndpointForm>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
 
@@ -56,11 +56,12 @@ export function DashboardPage() {
         
         <div className="text-xs font-bold uppercase tracking-[0.25em] text-amber-300">R2 Endpoint Admin</div>
         <h1 className="mt-3.5 max-w-3xl text-4xl font-extrabold tracking-tight text-zinc-50 sm:text-5xl font-display leading-[1.1]">
-          Manage Saved Worker Endpoints
+          Manage Cloudflare R2 buckets in one place
         </h1>
         <p className="mt-3 max-w-2xl text-xs sm:text-sm leading-relaxed text-zinc-400">
-          Store your Cloudflare Worker endpoint URL, API keys, and bucket binding paths in localStorage. 
-          The API key is securely transmitted via <code className="bg-zinc-900 px-1.5 py-0.5 rounded text-amber-200 border border-zinc-800 font-mono text-xs">x-api-key</code> headers during client requests.
+          Upload, browse, organize, and share files across multiple Cloudflare R2 buckets.
+          Connect your own Workers to Multy R2, an open-source R2 file manager.
+          Your endpoint settings and API keys stay in this browser’s local storage.
         </p>
         <Link
           to="/setup-guide"
