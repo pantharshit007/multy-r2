@@ -22,3 +22,15 @@ export const NOT_FOUND_PAGE: SeoPage = {
   title: "Page Not Found | Multy R2",
   description: "Return to Multy R2 to manage your Cloudflare R2 buckets or read the setup guide.",
 };
+
+export const SOCIAL_IMAGE_URL = "https://res.cloudinary.com/di0av3xly/image/upload/v1790578223/multy/multy-r2-og-image_1200x630.jpg";
+export const SOCIAL_IMAGE_META = {
+  "og:image": SOCIAL_IMAGE_URL,
+  "og:image:width": "1200",
+  "og:image:height": "630",
+  "og:image:type": "image/jpeg",
+  "og:image:alt": "Multy R2 — Cloudflare R2 File Manager",
+  "twitter:card": "summary_large_image",
+  "twitter:image": SOCIAL_IMAGE_URL,
+  "twitter:image:alt": "Multy R2 — Cloudflare R2 File Manager",
+};

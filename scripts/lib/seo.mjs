@@ -9,7 +9,8 @@ export function renderHead(page) {
     description: page.description, robots: page.robots,
     "og:title": page.title, "og:description": page.description,
     "og:type": "website", "og:site_name": "Multy R2",
-    "twitter:card": "summary", "twitter:title": page.title,
+    ...page.socialImageMeta,
+    "twitter:title": page.title,
     "twitter:description": page.description,
     ...(page.url ? { "og:url": page.url } : {}),
   };

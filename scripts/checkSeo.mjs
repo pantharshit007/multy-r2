@@ -8,6 +8,14 @@ const missing = await readFile("dist/404.html", "utf8");
 const sitemap = await readFile("dist/sitemap.xml", "utf8");
 const robots = await readFile("dist/robots.txt", "utf8");
 const redirects = await readFile("dist/_redirects", "utf8");
+for (const html of [home, guide, workspace, missing]) {
+  const ogImage = html.match(/property="og:image" content="([^"]+)"/);
+  const twitterImage = html.match(/name="twitter:image" content="([^"]+)"/);
+  assert.ok(ogImage, "Every page needs a social preview image");
+  assert.equal(ogImage[1], "https://res.cloudinary.com/di0av3xly/image/upload/v1790578223/multy/multy-r2-og-image_1200x630.jpg");
+  assert.equal(twitterImage?.[1], ogImage[1]);
+  assert.match(html, /name="twitter:card" content="summary_large_image"/);
+}
 const titles = new Set();
 for (const html of [home, guide]) {
   assert.equal((html.match(/<h1\b/g) || []).length, 1, "Public content must be prerendered");

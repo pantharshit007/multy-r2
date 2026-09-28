@@ -1,4 +1,4 @@
-import { NOT_FOUND_PAGE, PRIVATE_PAGE, PUBLIC_PAGES, SITE_URL } from "../constants/seo";
+import { NOT_FOUND_PAGE, PRIVATE_PAGE, PUBLIC_PAGES, SITE_URL, SOCIAL_IMAGE_META } from "../constants/seo";
 import { GITHUB_REPO_URL } from "../constants";
 
 export function getSeo(pathname: string) {
@@ -7,6 +7,7 @@ export function getSeo(pathname: string) {
   const url = page.path ? `${SITE_URL}${page.path}` : undefined;
   return {
     ...page,
+    socialImageMeta: SOCIAL_IMAGE_META,
     url,
     robots: url ? "index, follow" : "noindex, follow",
     schema: url ? {
@@ -31,7 +32,7 @@ export function applySeo(pathname: string) {
     "og:description": page.description,
     "og:type": "website",
     "og:site_name": "Multy R2",
-    "twitter:card": "summary",
+    ...page.socialImageMeta,
     "twitter:title": page.title,
     "twitter:description": page.description,
     ...(page.url ? { "og:url": page.url } : {}),
