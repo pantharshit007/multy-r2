@@ -1,17 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  /* Sleeker, more professional geometric corner radius */
-  --radius-3xl: 12px;
-  --radius-2xl: 8px;
-  --radius-xl: 6px;
-  --radius-lg: 4px;
+  --radius-3xl: 14px;
+  --radius-2xl: 10px;
+  --radius-xl: 8px;
+  --radius-lg: 6px;
 
-  /* Remap standard Zinc colors to adapt dynamically based on active theme class */
+  /* Semantic surface tokens — prefer these in new UI code. */
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-inset: var(--inset);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-fg: var(--accent-fg);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+
+  /* Legacy zinc scale, remapped per theme (used by the setup guide and older views). */
   --color-zinc-50: var(--color-val-50);
   --color-zinc-100: var(--color-val-100);
   --color-zinc-200: var(--color-val-200);
@@ -25,45 +41,56 @@
   --color-zinc-900: var(--color-val-900);
   --color-zinc-950: var(--color-val-950);
 
-  /* Remap Green colors dynamically */
   --color-green-200: var(--green-200);
   --color-green-300: var(--green-300);
   --color-green-400: var(--green-400);
   --color-green-900: var(--green-900);
   --color-green-950: var(--green-950);
 
-  /* Remap Red colors dynamically */
   --color-red-200: var(--red-200);
   --color-red-300: var(--red-300);
   --color-red-400: var(--red-400);
   --color-red-900: var(--red-900);
   --color-red-950: var(--red-950);
 
-  /* Remap Amber accent colors dynamically */
   --color-amber-200: var(--amber-200);
   --color-amber-300: var(--amber-300);
 
-  /* Icon stroke accent: amber in dark, zinc in light (see --icon-accent below). */
+  /* Icons follow the surrounding text color unless a component overrides them. */
   --color-icon-accent: var(--icon-accent);
 }
 
 :root {
   color-scheme: dark;
-  --bg-page: #09090b;
 
-  /* standard zinc colors mapped for dark theme */
-  --color-val-50: #fafafa;
-  --color-val-100: #f4f4f5;
-  --color-val-200: #e4e4e7;
-  --color-val-300: #d4d4d8;
-  --color-val-400: #a1a1aa;
-  --color-val-500: #71717a;
-  --color-val-600: #52525b;
-  --color-val-700: #3f3f46;
-  --color-val-800: #27272a;
-  --color-val-850: #1f1f23;
-  --color-val-900: #18181b;
-  --color-val-950: #09090b;
+  /* Cool graphite layers: each step reads as one level of elevation. */
+  --canvas: #0b0c0e;
+  --surface: #121417;
+  --raised: #1a1d21;
+  --inset: #0e1012;
+  --line: #23262b;
+  --line-strong: #33373d;
+  --fg: #eceef0;
+  --muted: #9a9fa6;
+  --subtle: #6a6f76;
+  --accent: #f5b83d;
+  --accent-hover: #f8c862;
+  --accent-fg: #1c1404;
+  --danger: #f87171;
+  --success: #4ade80;
+
+  --color-val-50: #f4f5f6;
+  --color-val-100: #e9eaec;
+  --color-val-200: #d5d7da;
+  --color-val-300: #b9bcc1;
+  --color-val-400: #9a9ea5;
+  --color-val-500: #737880;
+  --color-val-600: #555a61;
+  --color-val-700: #3a3e44;
+  --color-val-800: #2a2d32;
+  --color-val-850: #212428;
+  --color-val-900: #191b1e;
+  --color-val-950: #0f1012;
 
   --green-200: #bbf7d0;
   --green-300: #86efac;
@@ -77,19 +104,29 @@
   --red-900: #7f1d1d;
   --red-950: #450a0a;
 
-  --amber-200: #fde68a;
-  --amber-300: #fcd34d;
+  --amber-200: #f8c862;
+  --amber-300: #f5b83d;
 
-  /* Decorative icons: theme amber on dark backgrounds */
-  --icon-accent: var(--amber-300);
-
-  --glow-amber: rgba(251, 191, 36, 0.15);
-  --glow-green: rgba(132, 204, 22, 0.08);
+  --icon-accent: currentColor;
 }
 
 :root.light {
   color-scheme: light;
-  --bg-page: #f4f4f5;
+
+  --canvas: #f4f4f2;
+  --surface: #ffffff;
+  --raised: #f1f1ef;
+  --inset: #fafaf9;
+  --line: #e4e4e0;
+  --line-strong: #cfcfca;
+  --fg: #17181a;
+  --muted: #5f636a;
+  --subtle: #8e9298;
+  --accent: #b45309;
+  --accent-hover: #9a4708;
+  --accent-fg: #ffffff;
+  --danger: #dc2626;
+  --success: #15803d;
 
   /* Reversed zinc scale for light theme */
   --color-val-50: #09090b;
@@ -99,7 +136,6 @@
   --color-val-400: #52525b;
   --color-val-500: #71717a;
   --color-val-600: #a1a1aa;
-  
   --color-val-700: #e4e4e7;
   --color-val-800: #e4e4e7;
   --color-val-850: #d4d4d8;
@@ -114,34 +150,128 @@
 
   --red-200: #7f1d1d;
   --red-300: #b91c1c;
-  --red-400: #991b1b;
+  --red-400: #b91c1c;
   --red-900: #fecaca;
   --red-950: #fee2e2;
 
-  --amber-200: #b45309;
-  --amber-300: #d97706;
-
-  /* Decorative icons: zinc on light backgrounds (amber washes out) */
-  --icon-accent: var(--color-val-500);
-
-  --glow-amber: rgba(251, 191, 36, 0.08);
-  --glow-green: rgba(132, 204, 22, 0.04);
+  --amber-200: #9a4708;
+  --amber-300: #b45309;
 }
 
 body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background:
-    radial-gradient(circle at 20% 0%, var(--glow-amber), transparent 35rem),
-    radial-gradient(circle at 90% 10%, var(--glow-green), transparent 25rem),
-    var(--bg-page);
-  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  background: var(--canvas);
+  color: var(--fg);
+  -webkit-font-smoothing: antialiased;
+  font-feature-settings: "ss01", "cv11";
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 button:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.5;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-line bg-surface;
+  }
+
+  .panel-header {
+    @apply flex items-center justify-between gap-3 border-b border-line px-5 py-3.5;
+  }
+
+  .panel-title {
+    @apply text-[15px] font-semibold tracking-tight text-fg;
+  }
+
+  .label {
+    @apply text-[13px] font-medium text-fg;
+  }
+
+  .hint {
+    @apply text-xs leading-relaxed text-muted;
+  }
+
+  .field {
+    @apply h-10 w-full rounded-xl border border-line bg-inset px-3 text-sm text-fg outline-none transition-colors placeholder:text-subtle hover:border-line-strong focus:border-accent focus:outline-none;
+  }
+
+  .field-with-icon {
+    @apply pl-9.5;
+  }
+
+  .field-icon {
+    @apply pointer-events-none absolute inset-y-0 left-0 flex w-10 items-center justify-center text-subtle;
+  }
+
+  .code-inline {
+    @apply rounded-md bg-raised px-1 py-0.5 font-mono text-[0.92em] text-fg;
+  }
+
+  .btn {
+    @apply inline-flex h-9 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-xl px-3.5 text-[13px] font-medium whitespace-nowrap transition-colors;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-accent-fg hover:bg-accent-hover;
+  }
+
+  .btn-secondary {
+    @apply border border-line bg-raised text-fg hover:border-line-strong;
+  }
+
+  .btn-ghost {
+    @apply text-muted hover:bg-raised hover:text-fg;
+  }
+
+  .icon-btn {
+    @apply inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted transition-colors hover:bg-raised hover:text-fg;
+  }
+
+  .icon-btn-danger {
+    @apply hover:bg-danger/10 hover:text-danger;
+  }
+
+  .chip {
+    @apply inline-flex h-6 items-center gap-1.5 rounded-md border border-line bg-raised px-2 text-xs font-medium text-muted;
+  }
+
+  .dot {
+    @apply inline-block size-1.5 shrink-0 rounded-full;
+  }
+
+  /* Checkbox rendered as a switch. */
+  .switch {
+    @apply relative mt-0.5 h-5 w-9 shrink-0 cursor-pointer appearance-none rounded-full border border-line-strong bg-raised transition-colors checked:border-accent checked:bg-accent;
+  }
+  .switch::after {
+    content: "";
+    @apply absolute top-0.5 left-0.5 size-3.5 rounded-full bg-muted transition-transform;
+  }
+  .switch:checked::after {
+    @apply translate-x-4 bg-accent-fg;
+  }
+
+  .segmented {
+    @apply inline-flex rounded-xl border border-line bg-inset p-0.5;
+  }
+  .segmented > button {
+    @apply cursor-pointer rounded-lg px-3 py-1 text-xs font-medium text-muted transition-colors hover:text-fg;
+  }
+  .segmented > button[aria-pressed="true"] {
+    @apply bg-raised text-fg shadow-sm;
+  }
 }
 
 /* Hugeicons font icons — fixed square box so flex/absolute adornments center cleanly.
@@ -199,7 +329,7 @@ i.hgi-stroke.size-5 {
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -225,7 +355,7 @@ i.hgi-stroke.size-5 {
 }
 
 .animate-fade-in-up {
-  animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: fadeInUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .animate-pulse-status {
@@ -236,36 +366,37 @@ i.hgi-stroke.size-5 {
   animation: shimmer 1.5s infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--color-val-800);
+  background: var(--line-strong);
   border-radius: 9999px;
+  border: 2px solid var(--canvas);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-val-700);
+  background: var(--subtle);
 }
 
-
-
-/* Keep tree interactions visible in both palettes. */
-.tree-hover:hover,
-[aria-label="Folder tree"] .group:hover {
-  background-color: rgb(255 255 255 / 0.07);
+/* Tree rows */
+.tree-hover:hover {
+  background-color: var(--raised);
 }
 .tree-selected {
-  background-color: rgb(252 211 77 / 0.09);
-}
-:root.light .tree-hover:hover,
-:root.light [aria-label="Folder tree"] .group:hover {
-  background-color: rgb(24 24 27 / 0.1);
-}
-:root.light .tree-selected {
-  background-color: rgb(180 83 9 / 0.12);
+  background-color: color-mix(in oklab, var(--accent) 10%, transparent);
 }

@@ -5,9 +5,9 @@ type HugeIconProps = HTMLAttributes<HTMLElement>;
 type SvgIconProps = SVGProps<SVGSVGElement>;
 
 /**
- * Decorative icon stroke color.
- * Dark: amber accent. Light: zinc (see --icon-accent in styles.css).
- * Semantic overrides (red/green) still win via className + twMerge.
+ * Decorative icon stroke color. Follows the surrounding text color
+ * (see --icon-accent in styles.css). Semantic overrides (red/green)
+ * still win via className + twMerge.
  */
 const ICON_ACCENT = "text-icon-accent";
 
@@ -41,7 +41,7 @@ export function CopyIcon({ className, ...props }: HugeIconProps) {
 }
 
 export function TrashIcon({ className, ...props }: HugeIconProps) {
-  return <HugeIcon name="hgi-delete-04" className={cn("text-red-400", className)} {...props} />;
+  return <HugeIcon name="hgi-delete-04" className={className} {...props} />;
 }
 
 export function ExternalLinkIcon({ className, ...props }: HugeIconProps) {
@@ -83,7 +83,7 @@ export function KeyIcon({ className, ...props }: SvgIconProps) {
 
 export function CheckIcon({ className, ...props }: SvgIconProps) {
   return (
-    <SvgIcon strokeWidth={2} className={cn("size-4 text-green-400", className)} {...props}>
+    <SvgIcon strokeWidth={2} className={cn("size-4 text-success", className)} {...props}>
       <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
     </SvgIcon>
   );
@@ -172,4 +172,36 @@ export function SunIcon({ className, ...props }: HugeIconProps) {
 /** Theme switcher “moon” (shown in light mode). */
 export function MoonIcon({ className, ...props }: HugeIconProps) {
   return <HugeIcon name="hgi-moon-02" className={className} {...props} />;
+}
+
+export function PlusIcon({ className, ...props }: SvgIconProps) {
+  return (
+    <SvgIcon strokeWidth={2} className={cn("size-4", className)} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </SvgIcon>
+  );
+}
+
+export function ChevronRightIcon({ className, ...props }: SvgIconProps) {
+  return (
+    <SvgIcon strokeWidth={2} className={cn("size-4", className)} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+    </SvgIcon>
+  );
+}
+
+export function CloseIcon({ className, ...props }: SvgIconProps) {
+  return (
+    <SvgIcon strokeWidth={2} className={cn("size-4", className)} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+    </SvgIcon>
+  );
+}
+
+export function AlertIcon({ className, ...props }: SvgIconProps) {
+  return (
+    <SvgIcon strokeWidth={1.8} className={cn("size-4", className)} {...props}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+    </SvgIcon>
+  );
 }

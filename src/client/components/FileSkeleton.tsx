@@ -1,43 +1,29 @@
+function Bar({ className }: { className: string }) {
+  return (
+    <div className={`relative overflow-hidden rounded-md bg-raised ${className}`}>
+      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-line-strong/40 to-transparent" />
+    </div>
+  );
+}
+
 export function FileSkeleton() {
   const rows = Array.from({ length: 4 });
   return (
-    <div className="divide-y divide-zinc-800/60">
+    <div className="divide-y divide-line" aria-busy="true" aria-label="Loading files">
       {rows.map((_, index) => (
         <div
           key={index}
-          className="grid gap-2 px-4 py-4 md:grid-cols-[minmax(0,1fr)_4.5rem_9.5rem_6.75rem] md:items-center"
+          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-5 py-3 md:grid-cols-[minmax(0,1fr)_5.5rem_10.5rem_6.5rem]"
         >
-          {/* Key name skeleton */}
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="relative h-9 w-9 shrink-0 overflow-hidden rounded-xl bg-zinc-900 border border-zinc-800">
-              <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
-            </div>
-            <div className="relative h-4 w-2/3 overflow-hidden rounded bg-zinc-900">
-              <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
-            </div>
+          <div className="flex min-w-0 items-center gap-3">
+            <Bar className="size-8 shrink-0 rounded-lg" />
+            <Bar className="h-3.5 w-1/2" />
           </div>
-
-          {/* Size skeleton */}
-          <div className="relative h-3 w-12 overflow-hidden rounded bg-zinc-900 md:block">
-            <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
-          </div>
-
-          {/* Uploaded date skeleton */}
-          <div className="relative h-3 w-28 overflow-hidden rounded bg-zinc-900 md:block">
-            <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
-          </div>
-
-          {/* Actions button skeleton */}
-          <div className="flex items-center justify-end gap-1.5">
-            <div className="relative size-8 overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800">
-              <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
-            </div>
-            <div className="relative size-8 overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800">
-              <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
-            </div>
-            <div className="relative size-8 overflow-hidden rounded-lg bg-zinc-900 border border-zinc-800">
-              <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-zinc-800/30 to-transparent" />
-            </div>
+          <Bar className="hidden h-3 w-12 justify-self-end md:block" />
+          <Bar className="hidden h-3 w-28 md:block" />
+          <div className="flex justify-end gap-1">
+            <Bar className="size-7 rounded-lg" />
+            <Bar className="size-7 rounded-lg" />
           </div>
         </div>
       ))}

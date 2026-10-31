@@ -6,7 +6,7 @@ import { createEndpointFolderPath, loadEndpointFolders } from "../lib/folders";
 import { matchFolders, splitFolderPath } from "../utils/folders";
 import { sanitizeFolder } from "../../shared/utils/objectKeys";
 import type { FolderPickerProps } from "../types/folderPicker";
-import { ArrowLeftIcon, FolderIcon } from "./Icons";
+import { ArrowLeftIcon, ChevronRightIcon, FolderIcon, PlusIcon } from "./Icons";
 
 /** Browse discovered folders or choose a typed upload path without waiting for discovery. */
 export function FolderPicker({ record, value, disabled, onChange, onCreated }: FolderPickerProps) {
@@ -109,31 +109,31 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
     }
   }
 
-  return <div className="grid gap-1.5">
-    <span id={`${id}-label`} className="text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">Folder / Prefix</span>
+  return <div className="grid min-w-0 content-start gap-1.5">
+    <span id={`${id}-label`} className="label">Folder</span>
     <button ref={trigger} type="button" disabled={disabled} aria-labelledby={`${id}-label ${id}-value`} aria-haspopup="dialog"
       onClick={() => { browse(value); setOpen(true); }}
-      className="flex h-10 w-full items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 text-left text-sm text-zinc-300 transition-colors hover:border-amber-300/60 focus-visible:outline-amber-300 disabled:opacity-50">
-      <FolderIcon className="size-4 shrink-0 text-amber-300" />
-      <span id={`${id}-value`} className="min-w-0 flex-1 truncate">{value ? `${value}/` : "Bucket root"}</span>
-      <span className="text-xs text-zinc-500">Choose folder</span>
+      className="field flex items-center gap-2 text-left">
+      <FolderIcon className="size-4 shrink-0 text-muted" />
+      <span id={`${id}-value`} className={`min-w-0 flex-1 truncate ${value ? "font-mono text-[13px] text-fg" : "text-muted"}`}>{value ? `${value}/` : "Bucket root"}</span>
+      <span className="shrink-0 text-xs text-subtle">Change</span>
     </button>
     {open && createPortal(<dialog ref={dialog} aria-labelledby={`${id}-title`}
       onCancel={(event) => { event.preventDefault(); if (!busy.current) setOpen(false); }}
-      className="fixed inset-0 m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-160 overflow-hidden rounded-2xl border border-zinc-700/70 bg-zinc-950 p-0 text-zinc-100 shadow-2xl backdrop:bg-black/70 backdrop:backdrop-blur-sm">
+      className="fixed inset-0 m-auto max-h-[85dvh] w-[calc(100%-2rem)] max-w-160 overflow-hidden rounded-2xl border border-line-strong bg-surface p-0 text-fg shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm">
       <div className="flex items-center justify-between px-5 pt-5">
-        <h2 id={`${id}-title`} className="font-display text-lg font-semibold">Choose upload folder</h2>
-        <button type="button" disabled={creating} onClick={() => setOpen(false)} className="rounded-lg px-2 py-1 text-xs text-zinc-400 hover:text-white">Close <span className="ml-1 text-zinc-600">Esc</span></button>
+        <h2 id={`${id}-title`} className="text-base font-semibold tracking-tight">Choose upload folder</h2>
+        <button type="button" disabled={creating} onClick={() => setOpen(false)} className="btn btn-ghost h-7 px-2 text-xs">Close <kbd className="font-sans text-subtle">Esc</kbd></button>
       </div>
-      <p className="px-5 pt-1 text-xs leading-relaxed text-zinc-500">
-        Type <code className="text-zinc-300">photos/</code> to browse inside photos. Keep typing, like <code className="text-zinc-300">photos/vacation</code>, to find or create a nested folder.
+      <p className="hint px-5 pt-1">
+        Type <code className="code-inline">photos/</code> to browse inside photos. Keep typing, like <code className="code-inline">photos/vacation</code>, to find or create a nested folder.
       </p>
-      <div className="mx-5 mt-4 flex items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900/60 p-2 focus-within:border-amber-300/70">
-        <button type="button" aria-label="Go to parent folder" disabled={!parent || creating} onClick={() => browse(parent.split("/").slice(0, -1).join("/"))} className="rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-800 disabled:opacity-30"><ArrowLeftIcon className="size-4" /></button>
+      <div className="mx-5 mt-4 flex items-center gap-2 rounded-xl border border-line bg-inset p-1.5 focus-within:border-accent">
+        <button type="button" aria-label="Go to parent folder" disabled={!parent || creating} onClick={() => browse(parent.split("/").slice(0, -1).join("/"))} className="icon-btn disabled:opacity-30"><ArrowLeftIcon className="size-4" /></button>
         <input ref={input} role="combobox" aria-label="Search or create folder" aria-expanded="true" aria-controls={`${id}-list`} aria-autocomplete="list"
           aria-activedescendant={matches[active] ? `${id}-option-${active}` : undefined}
           disabled={creating} value={pathInput} placeholder="Type a folder path, e.g. photos/vacation…"
-          className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-zinc-600"
+          className="min-w-0 flex-1 bg-transparent py-1 text-sm outline-none placeholder:text-subtle focus-visible:outline-none"
           onChange={(event) => { setPathInput(event.target.value); setActive(0); }}
           onKeyDown={(event) => {
             if (event.nativeEvent.isComposing) return;
@@ -156,13 +156,13 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
           }} />
       </div>
       <div className="flex items-center justify-between gap-3 px-5 py-3">
-        <p className="min-w-0 truncate text-xs text-zinc-500" title={parent || "Bucket root"}>/{parent && `${parent}/`}</p>
-        <button type="button" disabled={creating || (!!parent && (parent.includes("..") || parent.includes("//")))} onClick={() => select(parent)} className="shrink-0 text-xs font-semibold text-amber-300 hover:text-amber-200 disabled:opacity-40">{parent ? "Use this folder" : "Use bucket root"}</button>
+        <p className="min-w-0 truncate font-mono text-xs text-muted" title={parent || "Bucket root"}>/{parent && `${parent}/`}</p>
+        <button type="button" disabled={creating || (!!parent && (parent.includes("..") || parent.includes("//")))} onClick={() => select(parent)} className="shrink-0 text-xs font-medium text-accent hover:text-accent-hover disabled:opacity-40">{parent ? "Use this folder" : "Use bucket root"}</button>
       </div>
       <div className="max-h-[40dvh] min-h-32 overflow-y-auto px-3 pb-3">
-        {loading ? <p role="status" className="p-3 text-sm text-zinc-500">Loading folders…</p> : error ? <div role="alert" className="p-3 text-sm text-red-300">{error}<button type="button" onClick={() => { invalidateFolderCache(record); setRetry((current) => current + 1); }} className="ml-3 underline">Retry</button></div> : null}
+        {loading ? <p role="status" className="p-3 text-sm text-muted">Loading folders…</p> : error ? <div role="alert" className="p-3 text-sm text-danger">{error}<button type="button" onClick={() => { invalidateFolderCache(record); setRetry((current) => current + 1); }} className="ml-3 underline">Retry</button></div> : null}
         <div id={`${id}-list`} role="listbox" aria-label="Folders" aria-busy={loading}>
-          {matches.map((path, index) => <div key={path} className={`flex items-center rounded-xl ${index === active ? "bg-amber-300/10 text-amber-200" : "text-zinc-300 hover:bg-zinc-900"}`}>
+          {matches.map((path, index) => <div key={path} className={`flex items-center rounded-xl ${index === active ? "bg-accent/10 text-fg" : "text-muted hover:bg-raised hover:text-fg"}`}>
             <button type="button" role="option" id={`${id}-option-${index}`} aria-selected={index === active} disabled={creating}
               onFocus={() => setActive(index)} onClick={() => select(path)}
               onKeyDown={(event) => {
@@ -171,17 +171,17 @@ export function FolderPicker({ record, value, disabled, onChange, onCreated }: F
                   activate(path, event.metaKey || event.ctrlKey);
                 }
               }}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-3 text-left text-sm focus-visible:outline-amber-300">
-              <FolderIcon className="size-4 shrink-0 text-amber-300/80" /><span className="truncate" title={path}>{parent ? path.slice(parent.length + 1) : path}</span>
+              className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm">
+              <FolderIcon className="size-4 shrink-0 text-accent" /><span className="truncate" title={path}>{parent ? path.slice(parent.length + 1) : path}</span>
             </button>
-            <button type="button" aria-label={`Browse ${path}`} disabled={creating} onClick={() => browse(path)} className="mr-1 rounded-lg px-3 py-2 text-zinc-500 hover:bg-zinc-800 hover:text-amber-200">→</button>
+            <button type="button" aria-label={`Browse ${path}`} disabled={creating} onClick={() => browse(path)} className="icon-btn mr-1"><ChevronRightIcon className="size-4" /></button>
           </div>)}
         </div>
-        {!loading && !error && !matches.length && <p className="p-3 text-sm text-zinc-500">{query ? "No matching folders." : "No subfolders here."}</p>}
-        {validCandidate && !exists && <button type="button" disabled={creating} onClick={() => select(candidate)} className="mt-2 w-full rounded-xl px-3 py-2 text-left text-sm text-amber-200 hover:bg-amber-300/5">Use “{candidate}” for upload</button>}
-        {canCreate && <button type="button" disabled={creating} onClick={() => void create()} className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-amber-300/30 px-3 py-3 text-left text-sm text-amber-200 hover:bg-amber-300/5 disabled:opacity-50"><span>+</span><span className="min-w-0 break-all">{creating ? "Creating…" : `Create & select “${candidate}”`}</span></button>}
+        {!loading && !error && !matches.length && <p className="p-3 text-sm text-muted">{query ? "No matching folders." : "No subfolders here."}</p>}
+        {validCandidate && !exists && <button type="button" disabled={creating} onClick={() => select(candidate)} className="mt-2 w-full rounded-xl px-3 py-2 text-left text-sm text-muted hover:bg-raised hover:text-fg">Use “{candidate}” for upload</button>}
+        {canCreate && <button type="button" disabled={creating} onClick={() => void create()} className="mt-2 flex w-full items-center gap-3 rounded-xl border border-dashed border-accent/40 px-3 py-2.5 text-left text-sm text-accent hover:bg-accent/5 disabled:opacity-50"><PlusIcon className="size-4" /><span className="min-w-0 break-all">{creating ? "Creating…" : `Create & select “${candidate}”`}</span></button>}
       </div>
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-zinc-800 bg-zinc-900/40 px-5 py-3 text-xs text-zinc-400 [&_kbd]:rounded-md [&_kbd]:bg-zinc-800 [&_kbd]:px-1.5 [&_kbd]:py-1 [&_kbd]:font-sans [&_kbd]:text-zinc-200">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line bg-inset px-5 py-3 text-xs text-muted [&_kbd]:rounded-md [&_kbd]:border [&_kbd]:border-line [&_kbd]:bg-raised [&_kbd]:px-1.5 [&_kbd]:py-0.5 [&_kbd]:font-sans [&_kbd]:text-fg">
         <span className="inline-flex items-center gap-1.5"><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
         <span className="inline-flex items-center gap-1.5" title="Open folders with subfolders; otherwise select. Create a new path when there is no match."><kbd>Enter</kbd> Open / select</span>
         <span className="inline-flex items-center gap-1.5" title="Select the highlighted folder without opening it"><kbd>⌘/Ctrl ↵</kbd> Select</span>
