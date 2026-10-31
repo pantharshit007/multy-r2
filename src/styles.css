@@ -172,9 +172,19 @@ body {
   background: color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
-:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+@layer base {
+  /* Layered so component/utility classes can override it. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* Text inputs show focus through their border (or their wrapper's), not a second ring. */
+  input:not([type="checkbox"], [type="radio"], [type="file"]):focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: none;
+  }
 }
 
 button:disabled {
