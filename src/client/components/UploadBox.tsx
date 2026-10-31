@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
 import type { UploadBoxProps } from "../types/upload";
 import { uploadEndpointObject } from "../api";
-import { buildPreviewKey, buildDerivedObjectName } from "../utils/naming";
+import { buildPreviewKey, buildDerivedObjectName, buildBaseObjectName } from "../utils/naming";
 import { MAX_UPLOAD_HISTORY_ENTRIES } from "../constants";
 import { describeUploadResult } from "../utils/format";
 import { UploadIcon, CheckIcon, FileIcon } from "./Icons";
@@ -30,10 +30,14 @@ export function UploadBox({
   const renameSignatureRef = useRef("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  /** Replace the staged file and clear errors from the previous selection. */
+  /** A new selection starts with its own name and retains the chosen folder. */
   function selectFile(next: File | null) {
+    if (!next) return;
     setFile(next);
-    if (next) onError(null);
+    setKey("");
+    setIsEditingName(false);
+    setInputNonce((current) => current + 1);
+    onError(null);
   }
 
   const isDragging = usePageFileDrop({ enabled: !disabled && !isPending, onFile: selectFile });
@@ -207,7 +211,7 @@ export function UploadBox({
               className="flex h-10 w-full items-center gap-2 rounded-xl border border-zinc-800/80 bg-zinc-900/30 px-3.5 text-left text-sm text-zinc-400 outline-none hover:border-amber-300/40 hover:bg-zinc-900/60 transition-all"
               type="button"
               onClick={() => {
-                setKey(objectName);
+                setKey(buildBaseObjectName(file, key, record.uploadSettings));
                 setIsEditingName(true);
               }}
             >
