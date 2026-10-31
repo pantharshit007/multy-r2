@@ -26,4 +26,4 @@ export const DEFAULT_BUCKET_SORT_ORDER = 0;
 export const ACCESS_MODES = ["public", "private", "signed-link"] as const;
 
 // Misc
-export const HEALTH_CHECK_MESSAGE = "Multy R2 endpoint worker";
+export const HEALTH_CHECK_MESSAGE = "Multy R2 endpoint worker is running";
