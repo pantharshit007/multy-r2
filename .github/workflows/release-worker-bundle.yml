@@ -1,5 +1,6 @@
-# Builds Multy's multi-bucket Worker JS and publishes it on every push to main
-# (direct push or merged PR). Rolling release tag: `worker`.
+# Builds and publishes Multy's multi-bucket Worker JS when its source or build
+# inputs change on main (direct push or merged PR). Each publication gets a dated
+# release; the rolling `worker` release keeps existing download links working.
 #
 # View inline (select-all → copy):
 #   https://raw.githubusercontent.com/pantharshit007/multy-r2/release-worker-js/worker.js
@@ -11,6 +12,16 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'src/server/**'
+      - 'src/shared/**'
+      - 'scripts/generateBucketNames.mjs'
+      - 'wrangler.jsonc'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'tsconfig.json'
+      - 'tsconfig.worker.json'
+      - '.github/workflows/release-worker-bundle.yml'
   workflow_dispatch:
 
 permissions:
@@ -46,13 +57,17 @@ jobs:
         run: pnpm build:worker-bundle
 
       - name: Prepare release asset
+        id: bundle
         run: |
+          set -euo pipefail
           # Drop sourcemap comment — map is not published with the paste asset.
           sed '/sourceMappingURL/d' dist-worker/index.js > dist-worker/worker.js
+          echo "tag=worker-$(date -u +%Y%m%d)-${GITHUB_RUN_NUMBER}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
 
       - name: Publish raw-viewable branch
+        id: publish
         # Release assets force download; raw.githubusercontent.com needs a repo file.
-        # Force-push a single-file branch so the setup guide can open JS inline.
+        # Append to the existing branch so every publication remains in its history.
         env:
           GIT_AUTHOR_NAME: github-actions[bot]
           GIT_AUTHOR_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
@@ -60,22 +75,54 @@ jobs:
           GIT_COMMITTER_EMAIL: 41898282+github-actions[bot]@users.noreply.github.com
         run: |
           set -euo pipefail
+          PARENTS=()
+          REMOTE_BRANCH=$(git ls-remote --heads origin refs/heads/release-worker-js)
+          if [ -n "$REMOTE_BRANCH" ]; then
+            git fetch --no-tags origin refs/heads/release-worker-js
+            PARENTS=(-p "$(git rev-parse FETCH_HEAD)")
+          fi
           BUNDLE_SHA=$(git hash-object -w dist-worker/worker.js)
           TREE=$(printf '100644 blob %s\tworker.js\n' "$BUNDLE_SHA" | git mktree)
-          COMMIT=$(git commit-tree "$TREE" -m "chore: publish worker.js from ${GITHUB_SHA}")
-          git push -f origin "$COMMIT:refs/heads/release-worker-js"
+          COMMIT=$(git commit-tree "$TREE" "${PARENTS[@]}" -m "chore: publish worker.js from ${GITHUB_SHA}")
+          git push origin "$COMMIT:refs/heads/release-worker-js"
+          echo "commit=$COMMIT" >> "$GITHUB_OUTPUT"
 
-      - name: Publish GitHub Release
+      - name: Publish dated GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.bundle.outputs.tag }}
+          name: Multy R2 Worker bundle — ${{ steps.bundle.outputs.tag }}
+          target_commitish: ${{ steps.publish.outputs.commit }}
+          make_latest: true
+          fail_on_unmatched_files: true
+          files: dist-worker/worker.js
+          body: |
+            Prebuilt **multi-bucket** Multy R2 Worker for Cloudflare dashboard paste.
+
+            - Source: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
+            - Bundle commit: https://github.com/${{ github.repository }}/commit/${{ steps.publish.outputs.commit }}
+            - View / copy this version: https://raw.githubusercontent.com/${{ github.repository }}/${{ steps.bundle.outputs.tag }}/worker.js
+            - Download this version: https://github.com/${{ github.repository }}/releases/download/${{ steps.bundle.outputs.tag }}/worker.js
+            - Build: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            For setup instructions and the rolling download, see the [worker release](https://github.com/${{ github.repository }}/releases/tag/worker).
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update rolling GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: worker
           name: Multy R2 Worker bundle
           target_commitish: ${{ github.sha }}
-          make_latest: true
+          make_latest: false
           overwrite_files: true
+          fail_on_unmatched_files: true
           files: dist-worker/worker.js
           body: |
             Prebuilt **multi-bucket** Multy R2 Worker for Cloudflare dashboard paste.
+
+            Latest version: [${{ steps.bundle.outputs.tag }}](https://github.com/${{ github.repository }}/releases/tag/${{ steps.bundle.outputs.tag }}).
 
             ## View / copy
             - Inline: https://raw.githubusercontent.com/${{ github.repository }}/release-worker-js/worker.js
@@ -93,3 +140,16 @@ jobs:
             Built from `${{ github.sha }}` on `${{ github.ref_name }}`.
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summarize publication
+        env:
+          RELEASE_TAG: ${{ steps.bundle.outputs.tag }}
+          BUNDLE_COMMIT: ${{ steps.publish.outputs.commit }}
+        run: |
+          {
+            echo "### Worker bundle published: $RELEASE_TAG"
+            echo "- Release: https://github.com/$GITHUB_REPOSITORY/releases/tag/$RELEASE_TAG"
+            echo "- Source: https://github.com/$GITHUB_REPOSITORY/commit/$GITHUB_SHA"
+            echo "- Bundle: https://github.com/$GITHUB_REPOSITORY/commit/$BUNDLE_COMMIT"
+            echo "- History: https://github.com/$GITHUB_REPOSITORY/commits/release-worker-js/"
+          } >> "$GITHUB_STEP_SUMMARY"

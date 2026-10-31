@@ -63,6 +63,10 @@ Paste the multi-bucket Worker from the rolling [worker](https://github.com/panth
 - Raw: https://raw.githubusercontent.com/pantharshit007/multy-r2/release-worker-js/worker.js
 - Local build: `pnpm build:worker-bundle` → `dist-worker/index.js` (do not deploy the Vite SPA `dist/` as a Worker)
 
+The **Release Worker Bundle** action updates the rolling `worker` release and raw JS branch when `main` changes Worker source (`src/server/`), shared code (`src/shared/`), or Worker build inputs (binding generator, Wrangler config, package manifest/lockfile, TypeScript config, or the workflow itself). UI-only and documentation changes skip it. Use **Run workflow** in GitHub Actions to rebuild manually.
+
+Each publication appends a commit to `release-worker-js` and creates a separate release tagged `worker-YYYYMMDD-<run number>-<attempt>` (UTC), including its bundle and source/build links. Browse [release history](https://github.com/pantharshit007/multy-r2/releases) for previous versions. The rolling `worker` download remains available at the same URL. History is preserved from the branch's current tip onward; commits removed by earlier force pushes are not restored.
+
 ## API
 
 Full Worker route reference: [docs/api.md](docs/api.md).
