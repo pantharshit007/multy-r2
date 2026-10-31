@@ -69,7 +69,7 @@ export function DeleteObjectDialog({ objectKey, isDeleting, onCancel, onConfirm 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="presentation">
       <button
-        className="absolute inset-0 cursor-default bg-zinc-950/75 backdrop-blur-sm"
+        className="absolute inset-0 cursor-default bg-black/60 backdrop-blur-sm"
         type="button"
         tabIndex={-1}
         aria-label="Close deletion confirmation"
@@ -78,26 +78,25 @@ export function DeleteObjectDialog({ objectKey, isDeleting, onCancel, onConfirm 
       />
       <section
         ref={dialogRef}
-        className="relative w-full max-w-md animate-fade-in-up overflow-hidden rounded-3xl border border-red-500/25 bg-zinc-950 p-6 shadow-2xl shadow-black/50"
+        className="relative w-full max-w-md animate-fade-in-up rounded-2xl border border-line-strong bg-surface p-6 shadow-2xl shadow-black/40"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="delete-object-title"
         aria-describedby="delete-object-description"
       >
-        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-400/70 to-transparent" />
-        <div className="flex size-11 items-center justify-center rounded-2xl border border-red-500/25 bg-red-500/10 text-red-300">
+        <div className="flex size-10 items-center justify-center rounded-xl bg-danger/10 text-danger">
           <TrashIcon className="size-5" />
         </div>
-        <h2 id="delete-object-title" className="mt-4 text-lg font-bold tracking-tight text-zinc-50 font-display">
+        <h2 id="delete-object-title" className="mt-4 text-base font-semibold tracking-tight text-fg">
           Delete this object?
         </h2>
-        <p id="delete-object-description" className="mt-2 text-sm leading-6 text-zinc-400">
-          This permanently removes <span className="break-all font-mono text-zinc-200">{objectKey}</span> from the selected R2 bucket.
+        <p id="delete-object-description" className="mt-1.5 text-sm leading-6 text-muted">
+          This permanently removes <code className="code-inline break-all">{objectKey}</code> from the bucket. This can&apos;t be undone.
         </p>
-        <div className="mt-6 flex justify-end gap-3">
+        <div className="mt-6 flex justify-end gap-2">
           <button
             ref={cancelButtonRef}
-            className="rounded-xl border border-zinc-700 px-4 py-2 text-xs font-semibold text-zinc-300 transition-colors hover:border-zinc-500 hover:text-zinc-100"
+            className="btn btn-secondary"
             type="button"
             disabled={isDeleting}
             onClick={onCancel}
@@ -105,12 +104,11 @@ export function DeleteObjectDialog({ objectKey, isDeleting, onCancel, onConfirm 
             Cancel
           </button>
           <button
-            className="inline-flex min-w-24 items-center justify-center gap-2 rounded-xl border border-red-400/30 bg-red-500/15 px-4 py-2 text-xs font-semibold text-red-200 transition-colors hover:border-red-300/60 hover:bg-red-500/25 disabled:cursor-wait"
+            className="btn min-w-24 bg-danger text-danger-fg hover:bg-danger/90 disabled:cursor-wait"
             type="button"
             disabled={isDeleting}
             onClick={onConfirm}
           >
-            <TrashIcon className="size-3.5" />
             {isDeleting ? "Deleting…" : "Delete"}
           </button>
         </div>

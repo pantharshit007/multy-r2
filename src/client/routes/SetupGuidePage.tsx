@@ -381,13 +381,10 @@ export function SetupGuidePage() {
                 You still must attach bindings and secrets in the dashboard — the JS file alone is not enough.
               </p>
               <ol className="grid gap-5">
-                <Step n={1} title="Get Multy's Worker bundle">
+                <Step n={1} title="Get Multy's Worker code">
                   <p>
-                    Get the prebuilt multi-bucket Worker from the rolling{" "}
-                    <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href={WORKER_RELEASE_URL} target="_blank" rel="noreferrer">
-                      <Code>{WORKER_RELEASE_TAG}</Code> GitHub Release
-                    </a>
-                    . Every push to <code className="text-zinc-300">main</code> rebuilds and updates this asset.
+                    Multy&apos;s Worker is a single, ready-made file of code. You don&apos;t need to build or change
+                    anything. You&apos;ll copy it now and paste it into Cloudflare in step 3.
                   </p>
                   <p>
                     <a
@@ -396,34 +393,38 @@ export function SetupGuidePage() {
                       target="_blank"
                       rel="noreferrer"
                     >
-                      Open {WORKER_RELEASE_ASSET}
-                    </a>
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    Opens the JS inline on GitHub (raw) — select all, copy, paste into the Worker editor.
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    Raw:{" "}
-                    <a className="break-all text-amber-200/80 underline decoration-amber-300/20 hover:decoration-amber-300" href={WORKER_BUNDLE_RAW_URL} target="_blank" rel="noreferrer">
-                      {WORKER_BUNDLE_RAW_URL}
-                    </a>
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    Download instead:{" "}
-                    <a className="break-all text-amber-200/80 underline decoration-amber-300/20 hover:decoration-amber-300" href={WORKER_BUNDLE_DOWNLOAD_URL} target="_blank" rel="noreferrer">
-                      {WORKER_BUNDLE_DOWNLOAD_URL}
+                      Open the Worker code
                     </a>
                   </p>
                   <p>
-                    Optional local build: <Code>pnpm build:worker-bundle</Code>{" → "}
-                    <Code>{WORKER_BUNDLE_OUTDIR}/{WORKER_BUNDLE_ENTRY}</Code>.
-                    Paste either file into the Worker editor.
+                    A page full of code opens in a new tab. Click anywhere on it, press{" "}
+                    <kbd className="rounded border border-zinc-700 px-1 font-sans text-xs text-zinc-200">Ctrl</kbd>/<kbd className="rounded border border-zinc-700 px-1 font-sans text-xs text-zinc-200">⌘</kbd>{" "}
+                    + <kbd className="rounded border border-zinc-700 px-1 font-sans text-xs text-zinc-200">A</kbd> to select it all, then copy it.
                   </p>
                   <p className="text-xs text-zinc-500">
-                    Local note: <Code>pnpm gen:bindings</Code> bakes friendly bucket labels from <em>your</em>{" "}
-                    <Code>wrangler.jsonc</Code> into the bundle. Runtime still resolves whatever R2 bindings you attach;
-                    only the display names in multi-bucket mode may show Multy&apos;s (or your local) bucket names.
+                    It&apos;s always the latest version. If you&apos;d rather save it as a file,{" "}
+                    <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href={WORKER_BUNDLE_DOWNLOAD_URL} target="_blank" rel="noreferrer">
+                      download {WORKER_RELEASE_ASSET}
+                    </a>{" "}
+                    instead, or browse the{" "}
+                    <a className="text-amber-200 underline decoration-amber-300/30 hover:decoration-amber-300" href={WORKER_RELEASE_URL} target="_blank" rel="noreferrer">
+                      release page
+                    </a>
+                    .
                   </p>
+                  <details className="group rounded-xl border border-zinc-800 px-3.5 py-2.5 text-xs text-zinc-500">
+                    <summary className="cursor-pointer text-zinc-400 hover:text-zinc-200">For developers: build it yourself</summary>
+                    <div className="mt-2 grid gap-2 leading-relaxed">
+                      <p>
+                        Run <Code>pnpm build:worker-bundle</Code> to produce{" "}
+                        <Code>{WORKER_BUNDLE_OUTDIR}/{WORKER_BUNDLE_ENTRY}</Code>, and paste that file instead.
+                      </p>
+                      <p>
+                        <Code>pnpm gen:bindings</Code> bakes bucket labels from your <Code>wrangler.jsonc</Code> into the
+                        bundle. Any R2 bindings you attach still work; only the display names in multi-bucket mode are affected.
+                      </p>
+                    </div>
+                  </details>
                 </Step>
                 <Step n={2} title="Create a Worker (Hello World stub)">
                   <p>
@@ -707,10 +708,12 @@ export function SetupGuidePage() {
                       {WORKER_BUNDLE_DOWNLOAD_URL}
                     </a>
                   </p>
+                  <div className="mt-3">
                   <CodeBlock
                     label="local equivalent"
                     code={`pnpm build:worker-bundle\n# → ${WORKER_BUNDLE_OUTDIR}/${WORKER_BUNDLE_ENTRY}\n# CI renames to ${WORKER_RELEASE_ASSET} on the ${WORKER_RELEASE_TAG} release`}
                   />
+                  </div>
                   <p className="mt-2 text-xs leading-relaxed text-zinc-500">
                     Heads-up for local builds: friendly multi-bucket labels come from{" "}
                     <Code>src/server/generated/bucketNames.ts</Code> (generated from your{" "}

@@ -2,7 +2,7 @@ import { FormEvent, useEffect, useLayoutEffect, useRef, useState, useTransition 
 import type { UploadBoxProps } from "../types/upload";
 import { uploadEndpointObject } from "../api";
 import { buildPreviewKey, buildDerivedObjectName, buildBaseObjectName } from "../utils/naming";
-import { MAX_UPLOAD_HISTORY_ENTRIES } from "../constants";
+import { CLOUDFLARE_UPLOAD_LIMITS_URL, MAX_UPLOAD_HISTORY_ENTRIES, UPLOAD_LIMITS } from "../constants";
 import { describeUploadResult, formatBytes } from "../utils/format";
 import { UploadIcon, CheckIcon, FileIcon } from "./Icons";
 import { usePageFileDrop } from "../lib/usePageFileDrop";
@@ -98,35 +98,42 @@ export function UploadBox({
     });
   }
 
+  const isBusy = disabled || isPending;
+  const limitSummary = UPLOAD_LIMITS.filter(({ limit }) => limit !== "Varies").map(({ plan, limit }) => `${limit} on ${plan}`).join(", ");
+
   return (
-    <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 backdrop-blur-xl">
+    <section className="panel" aria-labelledby="upload-heading">
       {isDragging && <FileDropOverlay />}
-      <form className="grid gap-4" onSubmit={submit}>
-        {/* Upload Area / Dropzone */}
+      <div className="panel-header">
+        <h2 id="upload-heading" className="panel-title">Upload</h2>
+        <a href={CLOUDFLARE_UPLOAD_LIMITS_URL} target="_blank" rel="noopener noreferrer" className="text-xs text-muted underline decoration-line-strong underline-offset-4 hover:text-fg">
+          Size limits
+        </a>
+      </div>
+      <form className="grid gap-4 p-5" onSubmit={submit}>
         <div
           role="button"
-          tabIndex={disabled || isPending ? -1 : 0}
+          tabIndex={isBusy ? -1 : 0}
+          aria-label={file ? `Selected ${file.name}. Choose a different file` : "Choose a file to upload"}
           onClick={() => {
-            if (disabled || isPending) return;
+            if (isBusy) return;
             fileInputRef.current?.click();
           }}
           onKeyDown={(event) => {
-            if (disabled || isPending) return;
+            if (isBusy) return;
             if (event.key === "Enter" || event.key === " ") {
               event.preventDefault();
               fileInputRef.current?.click();
             }
           }}
-          className={`flex flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center transition-all duration-200 ${
-            disabled || isPending
-              ? "cursor-not-allowed opacity-60"
-              : "cursor-pointer"
+          className={`flex items-center gap-4 rounded-xl border border-dashed px-4 py-4 transition-colors ${
+            isBusy ? "cursor-not-allowed opacity-60" : "cursor-pointer"
           } ${
             isDragging
-              ? "border-amber-300 bg-amber-300/10 text-zinc-100 ring-2 ring-amber-300/20"
+              ? "border-accent bg-accent/10"
               : file
-                ? "border-amber-300/40 bg-amber-300/5 text-zinc-100"
-                : "border-zinc-800 bg-zinc-900/10 hover:border-amber-300/40 hover:bg-amber-300/2 text-zinc-400"
+                ? "border-solid border-line-strong bg-raised"
+                : "border-line-strong bg-inset hover:border-accent/60 hover:bg-raised"
           }`}
         >
           <input
@@ -134,125 +141,98 @@ export function UploadBox({
             key={inputNonce}
             className="sr-only"
             type="file"
-            disabled={disabled || isPending}
+            disabled={isBusy}
             onChange={(event) => selectFile(event.target.files?.[0] ?? null)}
           />
+          <span className={`flex size-10 shrink-0 items-center justify-center rounded-lg border ${file ? "border-accent/30 bg-accent/10 text-accent" : "border-line bg-surface text-muted"}`}>
+            {file ? <FileIcon className="size-4.5" /> : <UploadIcon className="size-4.5" />}
+          </span>
           {file ? (
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-300/10 text-amber-300">
-                <CheckIcon className="size-5" />
-              </div>
-              <div>
-                <span className="block text-sm font-semibold truncate max-w-xs">{file.name}</span>
-                <span className="mt-0.5 block text-xs text-zinc-500">
-                  {formatBytes(file.size)} — Ready to upload
-                </span>
-                <span className="mt-1 block text-[11px] text-zinc-600">
-                  Click or drop another file anywhere to replace
-                </span>
-              </div>
-            </div>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium text-fg" title={file.name}>{file.name}</span>
+              <span className="mt-0.5 block text-xs text-muted">{formatBytes(file.size)}, ready to upload</span>
+            </span>
           ) : (
-            <div className="flex flex-col items-center gap-2">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-xl border transition-colors ${
-                isDragging
-                  ? "bg-amber-300/15 border-amber-300/40 text-amber-300"
-                  : "bg-zinc-900 border-zinc-800 text-zinc-400"
-              }`}>
-                <UploadIcon className="size-5" />
-              </div>
-              <div>
-                <span className="block text-sm font-medium">
-                  {isDragging ? "Drop file to select" : "Choose a file or drop it anywhere"}
-                </span>
-                <span className="mt-1 block text-xs text-zinc-500">
-                  Images, documents, and other files
-                </span>
-              </div>
-            </div>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-medium text-fg">
+                {isDragging ? "Drop to select this file" : <>Drop a file anywhere, or <span className="text-accent">browse</span></>}
+              </span>
+              <span className="mt-0.5 block text-xs text-muted">Up to {limitSummary}</span>
+            </span>
           )}
+          {file ? <span className="hidden text-xs font-medium text-muted sm:inline">Replace</span> : null}
         </div>
 
-        {/* Folder & Path Configuration */}
-        <FolderPicker
-          key={`${record.id}:${record.endPoint}:${record.workerBucketMode}:${record.bucketBindingName}`}
-          record={record}
-          value={folder}
-          disabled={disabled || isPending}
-          onChange={setFolder}
-          onCreated={(path) => {
-            onStatus(`Created folder ${path}/`);
-            onDone();
-          }}
-        />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <FolderPicker
+            key={`${record.id}:${record.endPoint}:${record.workerBucketMode}:${record.bucketBindingName}`}
+            record={record}
+            value={folder}
+            disabled={isBusy}
+            onChange={setFolder}
+            onCreated={(path) => {
+              onStatus(`Created folder ${path}/`);
+              onDone();
+            }}
+          />
 
-        {/* Object Key Name Overrides */}
-        <div className="grid gap-1.5">
-          <div className="flex items-center justify-between gap-3 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500">
-            <span>Destination Object Key</span>
-            <span className="text-[10px] text-zinc-600 font-normal">click preview to edit</span>
+          <div className="grid min-w-0 content-start gap-1.5">
+            <label htmlFor="upload-object-key" className="label">Object key</label>
+            {isEditingName ? (
+              <input
+                id="upload-object-key"
+                autoFocus
+                className="field"
+                value={key}
+                onChange={(event) => setKey(event.target.value)}
+                onBlur={() => setIsEditingName(false)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    setIsEditingName(false);
+                  }
+                }}
+              />
+            ) : (
+              <button
+                id="upload-object-key"
+                className="field flex items-center gap-2 text-left"
+                type="button"
+                title="Edit file name"
+                onClick={() => {
+                  setKey(buildBaseObjectName(file, key, record.uploadSettings));
+                  setIsEditingName(true);
+                }}
+              >
+                <span className={`min-w-0 flex-1 truncate font-mono text-[13px] ${resolvedName ? "text-fg" : "text-subtle"}`}>{resolvedName || "folder/name.jpg"}</span>
+                <span className="shrink-0 text-xs text-subtle">Edit</span>
+              </button>
+            )}
           </div>
-          {isEditingName ? (
-            <input
-              autoFocus
-              className="h-10 w-full rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 text-sm text-zinc-50 outline-none focus:border-amber-300/80 transition-all"
-              value={key}
-              onChange={(event) => setKey(event.target.value)}
-              onBlur={() => setIsEditingName(false)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  setIsEditingName(false);
-                }
-              }}
-            />
-          ) : (
-            <button
-              className="flex h-10 w-full items-center gap-2 rounded-xl border border-zinc-800/80 bg-zinc-900/30 px-3.5 text-left text-sm text-zinc-400 outline-none hover:border-amber-300/40 hover:bg-zinc-900/60 transition-all"
-              type="button"
-              onClick={() => {
-                setKey(buildBaseObjectName(file, key, record.uploadSettings));
-                setIsEditingName(true);
-              }}
-            >
-              <FileIcon className="size-4 shrink-0" />
-              <span className="truncate">{resolvedName || "temp/name.jpg"}</span>
-            </button>
-          )}
-          <p className="text-[11px] leading-relaxed text-zinc-500">
-            Preview updates automatically. Folder acts as a virtual prefix (e.g. <code className="bg-zinc-900 px-1 py-0.5 rounded text-zinc-400">temp</code> + <code className="bg-zinc-900 px-1 py-0.5 rounded text-zinc-400">name.jpg</code> = <code className="bg-zinc-900 px-1 py-0.5 rounded text-zinc-400">temp/name.jpg</code>).
-          </p>
         </div>
 
-        {/* Form Actions */}
-        <div className="flex items-center justify-end">
-          <button
-            className="h-10 rounded-xl bg-zinc-50 px-5 text-sm font-semibold text-zinc-950 hover:bg-amber-200 active:scale-98 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            type="submit"
-            disabled={disabled || isPending || !file}
-          >
-            {isPending ? "Uploading..." : "Upload Object"}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="hint">Folders are key prefixes: <code className="code-inline">photos</code> + <code className="code-inline">cat.jpg</code> saves as <code className="code-inline">photos/cat.jpg</code>.</p>
+          <button className="btn btn-primary sm:min-w-28" type="submit" disabled={isBusy || !file}>
+            <UploadIcon className="size-4" />
+            {isPending ? "Uploading…" : "Upload"}
           </button>
         </div>
       </form>
 
-      {/* Upload History */}
       {history.length > 0 ? (
-        <div className="mt-4 border-t border-zinc-850 pt-4">
-          <h4 className="text-[10px] font-semibold uppercase tracking-wider text-zinc-600">Recent Uploads</h4>
-          <div className="mt-2 grid gap-1.5">
+        <div className="border-t border-line px-5 py-4">
+          <h3 className="text-xs font-medium text-subtle">Recent uploads</h3>
+          <ul className="mt-2 grid gap-1">
             {history.map((item, index) => (
-              <div
-                key={`${index}-${item}`}
-                className="flex items-center gap-2 truncate rounded-xl border border-zinc-850 bg-zinc-900/20 px-3 py-2 text-[11px] text-zinc-400"
-              >
-                <CheckIcon className="size-3 text-green-500 shrink-0" />
-                <span className="truncate">{item}</span>
-              </div>
+              <li key={`${index}-${item}`} className="flex items-center gap-2 text-xs text-muted">
+                <CheckIcon className="size-3.5 shrink-0" />
+                <span className="truncate" title={item}>{item}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       ) : null}
-    </div>
+    </section>
   );
 }

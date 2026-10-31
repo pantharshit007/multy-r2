@@ -31,15 +31,15 @@ export function TreeFolderEditor({ parent, record, onCancel, onCreated }: TreeFo
       setPending(false);
     }
   }
-  return <div className="px-4 py-2">
+  return <div className="px-3 py-2">
     <form className="flex items-center gap-2" onSubmit={(event) => { event.preventDefault(); void create(); }}>
-      <FolderIcon className="size-4 shrink-0" />
+      <FolderIcon className="size-4 shrink-0 text-accent" />
       <input autoFocus aria-label={`New folder name in ${parent || "bucket root"}`} value={name} disabled={pending}
         onChange={(event) => setName(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape" && !pending) { event.preventDefault(); onCancel(); } }}
-        placeholder="Folder name" className="min-w-0 flex-1 rounded-lg border border-amber-300/60 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-1 focus:ring-amber-300/50" />
-      <button type="submit" disabled={pending || !name.trim()} className="rounded-lg px-2 py-2 text-xs text-amber-200 disabled:opacity-40">{pending ? "Creating…" : "Create"}</button>
-      <button type="button" disabled={pending} onClick={onCancel} className="rounded-lg px-2 py-2 text-xs text-zinc-500">Cancel</button>
+        placeholder="Folder name" className="field h-9 min-w-0 flex-1" />
+      <button type="submit" disabled={pending || !name.trim()} className="btn btn-primary h-8 px-3 text-xs">{pending ? "Creating…" : "Create"}</button>
+      <button type="button" disabled={pending} onClick={onCancel} className="btn btn-ghost h-8 px-3 text-xs">Cancel</button>
     </form>
-    {error && <p role="alert" className="mt-2 text-xs text-red-400">{error}</p>}
+    {error && <p role="alert" className="mt-2 text-xs text-danger">{error}</p>}
   </div>;
 }

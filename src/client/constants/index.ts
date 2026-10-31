@@ -50,3 +50,6 @@ export const UPLOAD_LIMITS = [
 
 export const FOLDER_CACHE_TTL_MS = 30_000;
 export const MAX_FOLDER_CACHE_ENTRIES = 20;
+
+/** How long a success toast stays on screen before dismissing itself. */
+export const TOAST_SUCCESS_DURATION_MS = 4000;

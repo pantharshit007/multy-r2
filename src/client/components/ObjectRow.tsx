@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { EndpointRecord, R2ObjectSummary } from "../../shared";
 import { isFolderObject } from "../../shared/utils/objectKeys";
 import { publicUrlFor } from "../api";
-import { formatBytes } from "../utils/format";
+import { formatBytes, formatDate } from "../utils/format";
 import { CopyIcon, CheckIcon, ExternalLinkIcon, TrashIcon, ImageIcon, CodeIcon, FileIcon, FolderIcon } from "./Icons";
 
 interface ObjectRowProps {
@@ -55,76 +55,75 @@ export function ObjectRow({
   const isImage = !isFolder && ["jpg", "jpeg", "png", "gif", "webp", "svg", "ico"].includes(extension);
   const isCode = !isFolder && ["json", "txt", "js", "ts", "html", "css", "md", "sh", "yml", "yaml"].includes(extension);
 
-  const iconBtnBase =
-    "inline-flex size-8 shrink-0 items-center justify-center rounded-lg border transition-all duration-200 cursor-pointer";
+  const name = compact ? object.key.split("/").filter(Boolean).pop() || object.key : object.key;
 
   return (
-    <div className={`grid gap-2 px-4 py-3 text-sm text-zinc-400 ${compact ? "sm:grid-cols-[minmax(0,1fr)_auto]" : "md:grid-cols-[minmax(0,1fr)_4.5rem_9.5rem_6.75rem]"} items-center hover:bg-zinc-900/20 transition-all duration-150 group`}>
-      <div className="flex items-center gap-3 min-w-0">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-zinc-900 border border-zinc-800 text-zinc-400 group-hover:border-zinc-700 group-hover:text-zinc-200 transition-colors">
+    <div className={`group grid items-center gap-x-3 gap-y-1 py-2 text-sm transition-colors hover:bg-raised/60 ${compact ? "grid-cols-[minmax(0,1fr)_auto] rounded-lg px-3" : "px-5 grid-cols-[minmax(0,1fr)_auto] md:grid-cols-[minmax(0,1fr)_5.5rem_10.5rem_6.5rem]"}`}>
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={`flex size-8 shrink-0 items-center justify-center rounded-lg ${isFolder ? "bg-accent/10 text-accent" : "bg-raised text-muted"}`}>
           {isFolder ? (
-            <FolderIcon className="size-4.5" />
+            <FolderIcon className="size-4" />
           ) : isImage ? (
-            <ImageIcon className="size-4.5" />
+            <ImageIcon className="size-4" />
           ) : isCode ? (
-            <CodeIcon className="size-4.5" />
+            <CodeIcon className="size-4" />
           ) : (
-            <FileIcon className="size-4.5" />
+            <FileIcon className="size-4" />
           )}
-        </div>
-        <span className="min-w-0 truncate font-medium text-zinc-100 group-hover:text-zinc-50 transition-colors" title={object.key}>
-          {compact ? object.key.split("/").pop() || object.key : object.key}
+        </span>
+        <span className="min-w-0">
+          <span className="block truncate text-fg" title={object.key}>{name}</span>
+          {!compact ? (
+            <span className="block text-xs text-subtle tabular-nums md:hidden">
+              {isFolder ? "Folder" : formatBytes(object.size)}{object.uploaded ? `, ${formatDate(object.uploaded)}` : ""}
+            </span>
+          ) : null}
         </span>
       </div>
 
-      {!compact && <><span className="text-zinc-500 font-mono text-xs tabular-nums md:text-sm">
-        {formatBytes(object.size)}
-      </span>
-
-      <span className="text-zinc-500 text-xs whitespace-nowrap">
-        {object.uploaded ? new Date(object.uploaded).toLocaleString() : "-"}
-      </span>
-
+      {!compact && <>
+        <span className="hidden text-right text-[13px] text-muted tabular-nums md:block">
+          {isFolder ? "—" : formatBytes(object.size)}
+        </span>
+        <span className="hidden text-[13px] whitespace-nowrap text-muted md:block">
+          {formatDate(object.uploaded)}
+        </span>
       </>}
 
-      <span className="flex items-center justify-end gap-1.5 flex-nowrap">
+      <span className="flex flex-nowrap items-center justify-end gap-0.5">
         {!isFolder && (
           <>
             <button
-              className={`${iconBtnBase} ${
-                copied
-                  ? "border-green-500/30 bg-green-500/10 text-green-400"
-                  : "border-zinc-700 text-zinc-300 hover:border-amber-300 hover:text-amber-200 hover:bg-amber-300/5"
-              }`}
+              className={`icon-btn ${copied ? "text-success" : ""}`}
               onClick={copyPublicUrl}
               type="button"
-              title={copied ? "Copied" : "Copy URL"}
-              aria-label={copied ? "Copied" : "Copy URL"}
+              title={copied ? "Copied" : "Copy public URL"}
+              aria-label={copied ? "Copied" : "Copy public URL"}
             >
-              {copied ? <CheckIcon className="size-3.5" /> : <CopyIcon className="size-3.5" />}
+              {copied ? <CheckIcon className="size-4" /> : <CopyIcon className="size-4" />}
             </button>
 
             <a
-              className={`${iconBtnBase} border-zinc-700 text-zinc-300 hover:border-amber-300 hover:text-amber-200 hover:bg-amber-300/5`}
+              className="icon-btn"
               href={publicUrl}
               target="_blank"
               rel="noopener noreferrer"
               title="Open in new tab"
               aria-label="Open in new tab"
             >
-              <ExternalLinkIcon className="size-3.5" />
+              <ExternalLinkIcon className="size-4" />
             </a>
           </>
         )}
 
         <button
-          className={`${iconBtnBase} border-red-900/60 text-red-400 hover:bg-red-950/40 hover:border-red-800`}
+          className="icon-btn icon-btn-danger"
           onClick={onDelete}
           type="button"
-          title="Delete"
-          aria-label="Delete"
+          title={isFolder ? "Delete folder entry" : "Delete"}
+          aria-label={isFolder ? "Delete folder entry" : "Delete"}
         >
-          <TrashIcon className="size-3.5" />
+          <TrashIcon className="size-4" />
         </button>
       </span>
     </div>
