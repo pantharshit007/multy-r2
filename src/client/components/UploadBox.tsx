@@ -3,7 +3,7 @@ import type { UploadBoxProps } from "../types/upload";
 import { uploadEndpointObject } from "../api";
 import { buildPreviewKey, buildDerivedObjectName, buildBaseObjectName } from "../utils/naming";
 import { MAX_UPLOAD_HISTORY_ENTRIES } from "../constants";
-import { describeUploadResult } from "../utils/format";
+import { describeUploadResult, formatBytes } from "../utils/format";
 import { UploadIcon, CheckIcon, FileIcon } from "./Icons";
 import { usePageFileDrop } from "../lib/usePageFileDrop";
 import { FileDropOverlay } from "./FileDropOverlay";
@@ -145,7 +145,7 @@ export function UploadBox({
               <div>
                 <span className="block text-sm font-semibold truncate max-w-xs">{file.name}</span>
                 <span className="mt-0.5 block text-xs text-zinc-500">
-                  {(file.size / 1024).toFixed(1)} KB — Ready to upload
+                  {formatBytes(file.size)} — Ready to upload
                 </span>
                 <span className="mt-1 block text-[11px] text-zinc-600">
                   Click or drop another file anywhere to replace
