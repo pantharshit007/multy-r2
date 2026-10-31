@@ -2142,7 +2142,7 @@ var R2_PROBE_LIMIT = 1;
 var DEFAULT_BUCKET_ACCESS_MODE = "public";
 var DEFAULT_BUCKET_SORT_ORDER = 0;
 var ACCESS_MODES = ["public", "private", "signed-link"];
-var HEALTH_CHECK_MESSAGE = "Multy R2 endpoint worker";
+var HEALTH_CHECK_MESSAGE = "Multy R2 endpoint worker is running";
 
 // src/server/middleware/cors.ts
 var ALLOW_METHODS = CORS_ALLOWED_METHODS.join(", ");
