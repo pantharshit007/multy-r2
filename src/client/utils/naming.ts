@@ -5,7 +5,8 @@ export function normalizeUploadFileName(name: string): string {
   const slash = name.lastIndexOf("/");
   const prefix = name.slice(0, slash + 1);
   const filename = name.slice(slash + 1).trim()
-    .replace(/\s+(?=\.[^.]+$)/u, "")
+    // Keep a separator after a dot so normalization cannot create "..".
+    .replace(/(?<=[^.\s])\s+(?=\.[^.]+$)/u, "")
     .replace(/\s+/gu, "-");
   return `${prefix}${filename}`;
 }
