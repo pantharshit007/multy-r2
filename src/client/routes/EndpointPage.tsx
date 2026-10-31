@@ -260,7 +260,7 @@ export function EndpointPage() {
             <FileSkeleton />
           ) : objects.length === 0 ? (
             <div className="p-8 text-center text-xs text-zinc-500 font-medium bg-zinc-900/5">
-              No files found in this bucket. Choose or drag a file above to begin uploading.
+              No files found in this bucket. Choose a file above or drop it anywhere on the page to begin uploading.
             </div>
           ) : view === "tree" ? (
             <ObjectTree key={`${record.id}:${record.endPoint}:${record.workerBucketMode}:${record.bucketBindingName}`} record={record} objects={objects} hasMore={Boolean(cursor)} onCreated={(path) => { runAction(async () => { await refreshObjects(); setStatus(`Created folder ${path}/`); }); }} onDelete={setObjectPendingDeletion} onError={setError} onStatus={setStatus} />

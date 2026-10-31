@@ -1,21 +1,14 @@
-import { DragEvent, FormEvent, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
-import type { EndpointRecord } from "../../shared";
+import { FormEvent, useEffect, useLayoutEffect, useRef, useState, useTransition } from "react";
+import type { UploadBoxProps } from "../types/upload";
 import { uploadEndpointObject } from "../api";
-import { buildPreviewKey, buildDerivedObjectName } from "../utils/naming";
+import { buildPreviewKey, buildDerivedObjectName, buildBaseObjectName } from "../utils/naming";
 import { MAX_UPLOAD_HISTORY_ENTRIES } from "../constants";
-import { describeUploadResult } from "../utils/format";
+import { describeUploadResult, formatBytes } from "../utils/format";
 import { UploadIcon, CheckIcon, FileIcon } from "./Icons";
+import { usePageFileDrop } from "../lib/usePageFileDrop";
+import { FileDropOverlay } from "./FileDropOverlay";
 
 import { FolderPicker } from "./FolderPicker";
-
-interface UploadBoxProps {
-  record: EndpointRecord;
-  disabled: boolean;
-  resetToken: number;
-  onDone: () => void;
-  onError: (message: string | null) => void;
-  onStatus: (message: string | null) => void;
-}
 
 /** Select a file and destination, then upload to the active endpoint scope. */
 export function UploadBox({
@@ -33,57 +26,21 @@ export function UploadBox({
   const [history, setHistory] = useState<string[]>([]);
   const [isEditingName, setIsEditingName] = useState(false);
   const [renameSalt, setRenameSalt] = useState("");
-  const [isDragging, setIsDragging] = useState(false);
   const [isPending, startTransition] = useTransition();
   const renameSignatureRef = useRef("");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const dragDepthRef = useRef(0);
 
-  /** Replace the staged file and clear errors from the previous selection. */
+  /** A new selection starts with its own name and retains the chosen folder. */
   function selectFile(next: File | null) {
+    if (!next) return;
     setFile(next);
-    if (next) onError(null);
+    setKey("");
+    setIsEditingName(false);
+    setInputNonce((current) => current + 1);
+    onError(null);
   }
 
-  /** Track nested drag targets so the drop highlight remains stable. */
-  function handleDragEnter(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (disabled || isPending) return;
-    dragDepthRef.current += 1;
-    if (event.dataTransfer.types.includes("Files")) {
-      setIsDragging(true);
-    }
-  }
-
-  /** Clear the drop highlight after leaving the entire dropzone. */
-  function handleDragLeave(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-    if (dragDepthRef.current === 0) {
-      setIsDragging(false);
-    }
-  }
-
-  /** Accept file drops only while uploads are enabled. */
-  function handleDragOver(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (disabled || isPending) return;
-    event.dataTransfer.dropEffect = "copy";
-  }
-
-  /** Stage the first dropped file without starting an upload. */
-  function handleDrop(event: DragEvent<HTMLDivElement>) {
-    event.preventDefault();
-    event.stopPropagation();
-    dragDepthRef.current = 0;
-    setIsDragging(false);
-    if (disabled || isPending) return;
-    const dropped = event.dataTransfer.files?.[0] ?? null;
-    if (dropped) selectFile(dropped);
-  }
+  const isDragging = usePageFileDrop({ enabled: !disabled && !isPending, onFile: selectFile });
 
   useEffect(() => {
     setHistory([]);
@@ -143,6 +100,7 @@ export function UploadBox({
 
   return (
     <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 backdrop-blur-xl">
+      {isDragging && <FileDropOverlay />}
       <form className="grid gap-4" onSubmit={submit}>
         {/* Upload Area / Dropzone */}
         <div
@@ -159,10 +117,6 @@ export function UploadBox({
               fileInputRef.current?.click();
             }
           }}
-          onDragEnter={handleDragEnter}
-          onDragLeave={handleDragLeave}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
           className={`flex flex-col items-center justify-center rounded-2xl border border-dashed p-6 text-center transition-all duration-200 ${
             disabled || isPending
               ? "cursor-not-allowed opacity-60"
@@ -191,10 +145,10 @@ export function UploadBox({
               <div>
                 <span className="block text-sm font-semibold truncate max-w-xs">{file.name}</span>
                 <span className="mt-0.5 block text-xs text-zinc-500">
-                  {(file.size / 1024).toFixed(1)} KB — Ready to upload
+                  {formatBytes(file.size)} — Ready to upload
                 </span>
                 <span className="mt-1 block text-[11px] text-zinc-600">
-                  Click or drop another file to replace
+                  Click or drop another file anywhere to replace
                 </span>
               </div>
             </div>
@@ -209,7 +163,7 @@ export function UploadBox({
               </div>
               <div>
                 <span className="block text-sm font-medium">
-                  {isDragging ? "Drop file to select" : "Choose or drag a file to upload"}
+                  {isDragging ? "Drop file to select" : "Choose a file or drop it anywhere"}
                 </span>
                 <span className="mt-1 block text-xs text-zinc-500">
                   Images, documents, and other files
@@ -257,7 +211,7 @@ export function UploadBox({
               className="flex h-10 w-full items-center gap-2 rounded-xl border border-zinc-800/80 bg-zinc-900/30 px-3.5 text-left text-sm text-zinc-400 outline-none hover:border-amber-300/40 hover:bg-zinc-900/60 transition-all"
               type="button"
               onClick={() => {
-                setKey(objectName);
+                setKey(buildBaseObjectName(file, key, record.uploadSettings));
                 setIsEditingName(true);
               }}
             >

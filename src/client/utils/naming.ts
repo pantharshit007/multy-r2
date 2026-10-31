@@ -1,5 +1,16 @@
 import type { ImageOutputFormat, UploadSettings } from "../../shared";
 
+/** Normalize the upload filename without renaming its destination folders. */
+export function normalizeUploadFileName(name: string): string {
+  const slash = name.lastIndexOf("/");
+  const prefix = name.slice(0, slash + 1);
+  const filename = name.slice(slash + 1).trim()
+    // Keep a separator after a dot so normalization cannot create "..".
+    .replace(/(?<=[^.\s])\s+(?=\.[^.]+$)/u, "")
+    .replace(/\s+/gu, "-");
+  return `${prefix}${filename}`;
+}
+
 export function buildPreviewKey(folder: string, name: string): string {
   const cleanName = name.trim().replace(/^\/+/, "");
   const cleanFolder = folder.trim().replace(/^\/+|\/+$/g, "");
@@ -14,18 +25,23 @@ export function buildDerivedObjectName(
   settings: UploadSettings,
   renameSalt: string,
 ): string {
-  const name = manualName.trim() || file?.name || "";
+  const name = buildBaseObjectName(file, manualName, settings);
   if (!name) return "";
 
-  const imageName = file && file.type.startsWith("image/")
-    ? replaceExtension(name, settings.imageUploadSettings.outputFormat)
-    : name;
-
   if (settings.duplicateStrategy === "rename") {
-    return appendRandomSuffix(imageName, renameSalt);
+    return appendRandomSuffix(name, renameSalt);
   }
 
-  return imageName;
+  return name;
+}
+
+/** The editable name excludes the automatically managed duplicate suffix. */
+export function buildBaseObjectName(file: File | null, manualName: string, settings: UploadSettings): string {
+  const name = normalizeUploadFileName(manualName.trim() || file?.name || "");
+  if (!name) return "";
+  return file && file.type.startsWith("image/")
+    ? replaceExtension(name, settings.imageUploadSettings.outputFormat)
+    : name;
 }
 
 export function appendRandomSuffix(name: string, suffix: string): string {

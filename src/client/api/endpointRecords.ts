@@ -21,7 +21,7 @@ import {
 } from "../lib/endpointResolver";
 import { fitImage, canvasToBlob, isImageFile, toMimeType } from "../lib/imageProcessing";
 import { invalidateFolderCache } from "../lib/folderCache";
-import { replaceExtension } from "../utils/naming";
+import { normalizeUploadFileName, replaceExtension } from "../utils/naming";
 
 export function listEndpointRecords(): EndpointRecord[] {
   const raw = localStorage.getItem(ENDPOINTS_STORAGE_KEY);
@@ -170,7 +170,7 @@ export interface UploadEndpointObjectResult {
 }
 
 export async function uploadEndpointObject(record: EndpointRecord, file: File, key: string): Promise<UploadEndpointObjectResult> {
-  const cleanKey = sanitizeKey(key || file.name);
+  const cleanKey = sanitizeKey(normalizeUploadFileName(key || file.name));
   const uploadFile = await prepareUploadFile(file, record.uploadSettings.imageUploadSettings);
   const uploadKey = cleanKey;
 
