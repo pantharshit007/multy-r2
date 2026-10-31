@@ -25,6 +25,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-fg: var(--accent-fg);
   --color-danger: var(--danger);
+  --color-danger-fg: var(--danger-fg);
   --color-success: var(--success);
 
   /* Legacy zinc scale, remapped per theme (used by the setup guide and older views). */
@@ -72,11 +73,12 @@
   --line-strong: #33373d;
   --fg: #eceef0;
   --muted: #9a9fa6;
-  --subtle: #6a6f76;
+  --subtle: #858a91;
   --accent: #f5b83d;
   --accent-hover: #f8c862;
   --accent-fg: #1c1404;
   --danger: #f87171;
+  --danger-fg: #1c0606;
   --success: #4ade80;
 
   --color-val-50: #f4f5f6;
@@ -121,11 +123,12 @@
   --line-strong: #cfcfca;
   --fg: #17181a;
   --muted: #5f636a;
-  --subtle: #8e9298;
+  --subtle: #676b72;
   --accent: #b45309;
   --accent-hover: #9a4708;
   --accent-fg: #ffffff;
   --danger: #dc2626;
+  --danger-fg: #ffffff;
   --success: #15803d;
 
   /* Reversed zinc scale for light theme */

@@ -1,8 +1,4 @@
-import type { InputHTMLAttributes, ReactNode } from "react";
-
-interface IconInputProps extends InputHTMLAttributes<HTMLInputElement> {
-  icon: ReactNode;
-}
+import type { IconInputProps } from "../types/ui";
 
 /** Text input with a leading decorative icon, using the shared `.field` style. */
 export function IconInput({ icon, className = "", ...props }: IconInputProps) {

@@ -104,7 +104,7 @@ export function DeleteObjectDialog({ objectKey, isDeleting, onCancel, onConfirm 
             Cancel
           </button>
           <button
-            className="btn min-w-24 bg-danger text-white hover:bg-danger/90 disabled:cursor-wait"
+            className="btn min-w-24 bg-danger text-danger-fg hover:bg-danger/90 disabled:cursor-wait"
             type="button"
             disabled={isDeleting}
             onClick={onConfirm}

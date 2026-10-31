@@ -128,14 +128,6 @@ export function ChevronDownIcon({ className, ...props }: SvgIconProps) {
   );
 }
 
-export function ChevronUpIcon({ className, ...props }: SvgIconProps) {
-  return (
-    <SvgIcon strokeWidth={2} className={cn("size-4", className)} {...props}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-    </SvgIcon>
-  );
-}
-
 export function ImageIcon({ className, ...props }: HugeIconProps) {
   return <HugeIcon name="hgi-image-03" className={className} {...props} />;
 }

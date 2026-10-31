@@ -116,9 +116,9 @@ export function DashboardPage() {
                         <span className="flex min-w-0 items-center gap-2">
                           <span className="truncate text-sm font-medium text-fg">{formatHost(title)}</span>
                           {bucket ? (
-                            <span className="chip h-5 shrink-0 px-1.5 text-[11px]">
+                            <span className="chip h-5 max-w-[45%] min-w-0 px-1.5 text-[11px]" title={bucket}>
                               <BucketIcon className="size-3" />
-                              {bucket}
+                              <span className="truncate">{bucket}</span>
                             </span>
                           ) : null}
                         </span>

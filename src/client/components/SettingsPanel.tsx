@@ -1,8 +1,9 @@
-import { FormEvent, useEffect, useRef, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import type { EndpointRecord, DuplicateStrategy, ImageOutputFormat, ImageUploadSettings } from "../../shared";
 import { saveEndpointRecord } from "../api";
 import { WorkerBucketPicker } from "./WorkerBucketPicker";
 import { SETTINGS_SAVED_FEEDBACK_MS } from "../constants";
+import type { SettingsSectionProps, SwitchRowProps } from "../types/ui";
 import { IconInput } from "./IconInput";
 import { SettingsIcon, ServerIcon, KeyIcon, GlobeIcon, ChevronDownIcon, ImageIcon, CheckIcon } from "./Icons";
 
@@ -277,7 +278,7 @@ export function SettingsPanel({
   );
 }
 
-function SettingsSection({ title, children }: { title: string; children: ReactNode }) {
+function SettingsSection({ title, children }: SettingsSectionProps) {
   return (
     <section className="grid gap-4 border-b border-line px-5 py-5">
       <h3 className="text-xs font-medium text-subtle">{title}</h3>
@@ -286,7 +287,7 @@ function SettingsSection({ title, children }: { title: string; children: ReactNo
   );
 }
 
-function SwitchRow({ label, description, checked, onChange }: { label: string; description: string; checked: boolean; onChange: (checked: boolean) => void }) {
+function SwitchRow({ label, description, checked, onChange }: SwitchRowProps) {
   return (
     <label className="flex cursor-pointer items-start justify-between gap-4">
       <span>

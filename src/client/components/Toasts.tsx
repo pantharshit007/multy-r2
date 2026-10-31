@@ -1,14 +1,9 @@
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { TOAST_SUCCESS_DURATION_MS } from "../constants";
+import type { ToastProps, ToastsProps } from "../types/ui";
 import { AlertIcon, CheckIcon, CloseIcon } from "./Icons";
 
-interface ToastsProps {
-  error: string | null;
-  status: string | null;
-  onDismissError: () => void;
-  onDismissStatus: () => void;
-}
 
 /** Floating feedback for page actions. Success notes fade on their own; errors stay until dismissed. */
 export function Toasts({ error, status, onDismissError, onDismissStatus }: ToastsProps) {
@@ -33,7 +28,7 @@ export function Toasts({ error, status, onDismissError, onDismissStatus }: Toast
   );
 }
 
-function Toast({ tone, message, onDismiss }: { tone: "error" | "success"; message: string; onDismiss: () => void }) {
+function Toast({ tone, message, onDismiss }: ToastProps) {
   const isError = tone === "error";
   return (
     <div
