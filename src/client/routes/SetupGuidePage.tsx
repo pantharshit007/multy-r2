@@ -690,8 +690,8 @@ export function SetupGuidePage() {
                 <div className="rounded-2xl border border-amber-300/40 bg-amber-300/10 p-4">
                   <p className="text-sm font-bold text-zinc-50">GitHub Release (auto on main)</p>
                   <p className="mt-1.5 text-xs leading-relaxed text-zinc-400">
-                    CI workflow <code className="text-zinc-300">release-worker-bundle.yml</code> runs on each push to{" "}
-                    <code className="text-zinc-300">main</code>, builds the multi-bucket Worker, and updates the rolling{" "}
+                    CI workflow <code className="text-zinc-300">release-worker-bundle.yml</code> runs when Worker source, shared code, or build inputs change on{" "}
+                    <code className="text-zinc-300">main</code>. Each publication preserves the bundle branch history, creates a dated release, and updates the rolling{" "}
                     <code className="text-zinc-300">{WORKER_RELEASE_TAG}</code> release asset{" "}
                     <code className="text-zinc-300">{WORKER_RELEASE_ASSET}</code>. Users download and paste — no clone required.
                   </p>

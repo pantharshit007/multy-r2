@@ -28,11 +28,13 @@ permissions:
   contents: write
 
 concurrency:
+  # Serialize publication; GitHub keeps only the newest pending run during bursts.
   group: release-worker-bundle
   cancel-in-progress: false
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -92,7 +94,9 @@ jobs:
         with:
           tag_name: ${{ steps.bundle.outputs.tag }}
           name: Multy R2 Worker bundle — ${{ steps.bundle.outputs.tag }}
-          target_commitish: ${{ steps.publish.outputs.commit }}
+          # Tag the source commit; tagging the bundle-only tree through the API
+          # can require workflow permissions unavailable to GITHUB_TOKEN.
+          target_commitish: ${{ github.sha }}
           make_latest: true
           fail_on_unmatched_files: true
           files: dist-worker/worker.js
@@ -101,7 +105,7 @@ jobs:
 
             - Source: https://github.com/${{ github.repository }}/commit/${{ github.sha }}
             - Bundle commit: https://github.com/${{ github.repository }}/commit/${{ steps.publish.outputs.commit }}
-            - View / copy this version: https://raw.githubusercontent.com/${{ github.repository }}/${{ steps.bundle.outputs.tag }}/worker.js
+            - View / copy this version: https://raw.githubusercontent.com/${{ github.repository }}/${{ steps.publish.outputs.commit }}/worker.js
             - Download this version: https://github.com/${{ github.repository }}/releases/download/${{ steps.bundle.outputs.tag }}/worker.js
             - Build: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
